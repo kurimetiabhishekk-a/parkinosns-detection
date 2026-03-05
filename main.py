@@ -6,6 +6,7 @@ import pandas as pd
 from datetime import datetime
 import os
 import time
+import sqlite3
 from utils import *
 from voiceTest import *
 
@@ -17,54 +18,61 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_SECURE'] = False
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 
-# ── Dynamic Database Handling ────────────────────────────────────────────────
+# ── Resilient Database Logic ────────────────────────────────────────────────
 DATABASE_URL = os.environ.get('DATABASE_URL', '')
 
 def get_db_connection():
-    """Returns a connection and the placeholder type ('%s' for PG, '?' for SQLite)"""
+    """Attempt PostgreSQL, fallback to SQLite if anything goes wrong."""
     if DATABASE_URL:
-        import psycopg2
-        conn = psycopg2.connect(DATABASE_URL, sslmode='require')
-        return conn, '%s'
-    else:
-        import sqlite3
-        conn = sqlite3.connect('mydatabase.db')
-        return conn, '?'
+        try:
+            import psycopg2
+            conn = psycopg2.connect(DATABASE_URL, sslmode='require', connect_timeout=5)
+            return conn, '%s'
+        except Exception as e:
+            print(f"CRITICAL: PostgreSQL Connection Failed: {e}. Falling back to SQLite.")
+    
+    # SQLite Fallback
+    conn = sqlite3.connect('mydatabase.db', check_same_thread=False)
+    return conn, '?'
 
 def init_db():
-    """Initialise tables in whichever database is active."""
+    """Initialise tables and seed a default user for immediate testing."""
     os.makedirs('static/img', exist_ok=True)
     os.makedirs('upload', exist_ok=True)
     try:
-        conn, _ = get_db_connection()
+        conn, p = get_db_connection()
         cur = conn.cursor()
         
-        # Table for Users
-        cur.execute("""
+        # Create Users Table
+        cur.execute(f"""
             CREATE TABLE IF NOT EXISTS users (
-                date TEXT,
-                name TEXT NOT NULL,
-                email TEXT PRIMARY KEY,
-                password TEXT NOT NULL,
-                pet TEXT
+                date TEXT, name TEXT NOT NULL, email TEXT PRIMARY KEY, 
+                password TEXT NOT NULL, pet TEXT
             )
         """)
         
-        # Table for Results
-        cur.execute("""
+        # Create Predictions Table
+        cur.execute(f"""
             CREATE TABLE IF NOT EXISTS predictions (
-                date TEXT,
-                name TEXT,
-                drawing_pred TEXT,
-                voice_pred TEXT,
-                final_pred TEXT
+                date TEXT, name TEXT, drawing_pred TEXT, 
+                voice_pred TEXT, final_pred TEXT
             )
         """)
+        
+        # SEED DEFAULT USER (So login always works for testing)
+        # Email: demo@parkisense.com | Password: demo1234
+        cur.execute(f"SELECT name FROM users WHERE email={p}", ("demo@parkisense.com",))
+        if not cur.fetchone():
+            dt = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+            cur.execute(
+                f"INSERT INTO users (date, name, email, password, pet) VALUES ({p},{p},{p},{p},{p})",
+                (dt, "Demo User", "demo@parkisense.com", "demo1234", "Buddy")
+            )
         
         conn.commit()
         cur.close()
         conn.close()
-        print(f"DEBUG: DB Initialised ({'PostgreSQL' if DATABASE_URL else 'SQLite'})")
+        print("DEBUG: Database successfully initialised with fallback & seed logic.")
     except Exception as e:
         print(f"DEBUG: DB Init Error: {e}")
 
@@ -114,10 +122,10 @@ def login():
                 session['voicePred'] = 'Healthy'
                 return redirect(url_for('home'))
             else:
-                error = "Invalid Credentials. Please try again."
+                error = "Invalid Credentials. Use demo@parkisense.com / demo1234 if you're testing."
         except Exception as e:
             print(f"DEBUG: Login error: {e}")
-            error = "Database error. Please try again."
+            error = "Temporary connection issue. Please try logging in again."
         return render_template('login.html', error=error)
     return render_template('login.html')
 
@@ -165,7 +173,7 @@ def register():
             return redirect(url_for('login'))
         except Exception as e:
             print(f"DEBUG: Register error: {e}")
-            error = "Registration failed. Please try again."
+            error = "Database busy. Please try registering again in a moment."
     return render_template('register.html', error=error)
 
 
@@ -186,10 +194,10 @@ def forgot():
             if row:
                 error = 'Your password: ' + row[0]
             else:
-                error = 'Invalid information. Please try again.'
+                error = 'Information not found. Check your email and pet name.'
         except Exception as e:
             print(f"DEBUG: Forgot error: {e}")
-            error = "Database error. Please try again."
+            error = "Database busy. Please try again."
         return render_template('forgot-password.html', error=error)
     return render_template('forgot-password.html')
 
