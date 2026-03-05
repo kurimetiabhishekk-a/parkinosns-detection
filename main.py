@@ -2,6 +2,8 @@
 from flask import Flask, render_template, redirect, url_for, request, session, Response
 from werkzeug.utils import secure_filename
 from functools import wraps
+import psycopg2
+import psycopg2.extras
 import pandas as pd
 from datetime import datetime
 import os
@@ -17,27 +19,46 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_SECURE'] = False
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 
-# ── MongoDB Connection ────────────────────────────────────────────────────────
-from pymongo import MongoClient
+# ── Supabase / PostgreSQL Connection ─────────────────────────────────────────
+DATABASE_URL = os.environ.get('DATABASE_URL', '')
 
-MONGODB_URI = os.environ.get('MONGODB_URI', '')
-
-def get_db():
-    """Return MongoDB database instance."""
-    client = MongoClient(MONGODB_URI)
-    return client['parkisense']
+def get_conn():
+    """Return a PostgreSQL connection to Supabase."""
+    return psycopg2.connect(DATABASE_URL, sslmode='require')
 
 def init_db():
-    """Initialize DB and ensure runtime folders exist."""
+    """Create tables if they don't exist and set up runtime folders."""
     os.makedirs('static/img', exist_ok=True)
     os.makedirs('upload', exist_ok=True)
     try:
-        db = get_db()
-        # Create indexes for fast lookups
-        db.users.create_index('email', unique=True)
-        print("DEBUG: MongoDB connected and initialised.")
+        conn = get_conn()
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                date TEXT,
+                name TEXT NOT NULL,
+                email TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                pet TEXT
+            )
+        """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS predictions (
+                id SERIAL PRIMARY KEY,
+                date TEXT,
+                name TEXT,
+                drawing_pred TEXT,
+                voice_pred TEXT,
+                final_pred TEXT
+            )
+        """)
+        conn.commit()
+        cur.close()
+        conn.close()
+        print("DEBUG: Supabase DB initialised successfully.")
     except Exception as e:
-        print(f"DEBUG: MongoDB init error: {e}")
+        print(f"DEBUG: DB init error: {e}")
 
 init_db()
 
@@ -73,17 +94,21 @@ def login():
         email = (request.form.get('email') or '').strip().lower()
         password = request.form.get('password') or ''
         try:
-            db = get_db()
-            user = db.users.find_one({'email': email, 'password': password})
-            if user:
-                session['name'] = user['name']
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute("SELECT name FROM users WHERE email=%s AND password=%s", (email, password))
+            row = cur.fetchone()
+            cur.close()
+            conn.close()
+            if row:
+                session['name'] = row[0]
                 session['pred'] = 'Healthy'
                 session['voicePred'] = 'Healthy'
                 return redirect(url_for('home'))
             else:
                 error = "Invalid Credentials. Please try again."
         except Exception as e:
-            print(f"DEBUG: Login DB error: {e}")
+            print(f"DEBUG: Login error: {e}")
             error = "Database error. Please try again."
         return render_template('login.html', error=error)
     return render_template('login.html')
@@ -112,24 +137,27 @@ def register():
             return render_template('register.html', error=error)
 
         try:
-            db = get_db()
-            if db.users.find_one({'email': email}):
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute("SELECT id FROM users WHERE email=%s", (email,))
+            if cur.fetchone():
+                cur.close()
+                conn.close()
                 error = 'User already registered!'
                 return render_template('register.html', error=error)
-
-            db.users.insert_one({
-                'date': datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-                'name': name,
-                'email': email,
-                'password': password,
-                'pet': pet
-            })
+            dt = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+            cur.execute(
+                "INSERT INTO users (date, name, email, password, pet) VALUES (%s,%s,%s,%s,%s)",
+                (dt, name, email, password, pet)
+            )
+            conn.commit()
+            cur.close()
+            conn.close()
             return redirect(url_for('login'))
         except Exception as e:
-            print(f"DEBUG: Register DB error: {e}")
+            print(f"DEBUG: Register error: {e}")
             error = "Registration failed. Please try again."
-            return render_template('register.html', error=error)
-    return render_template('register.html')
+    return render_template('register.html', error=error)
 
 
 # ── Forgot Password ───────────────────────────────────────────────────────────
@@ -140,14 +168,18 @@ def forgot():
         email = (request.form.get('email') or '').strip().lower()
         pet = (request.form.get('pet') or '').strip().lower()
         try:
-            db = get_db()
-            user = db.users.find_one({'email': email, 'pet': pet})
-            if user:
-                error = 'Your password: ' + user['password']
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute("SELECT password FROM users WHERE email=%s AND pet=%s", (email, pet))
+            row = cur.fetchone()
+            cur.close()
+            conn.close()
+            if row:
+                error = 'Your password: ' + row[0]
             else:
                 error = 'Invalid information. Please try again.'
         except Exception as e:
-            print(f"DEBUG: Forgot DB error: {e}")
+            print(f"DEBUG: Forgot error: {e}")
             error = "Database error. Please try again."
         return render_template('forgot-password.html', error=error)
     return render_template('forgot-password.html')
@@ -177,20 +209,23 @@ def dashboard():
 
     now = datetime.now()
     try:
-        db = get_db()
-        db.predictions.insert_one({
-            'date': now.strftime("%d/%m/%Y %H:%M:%S"),
-            'name': user_name,
-            'drawing': 'Weak Pattern' if pred == 'Parkinson' else pred,
-            'voice': 'Weak Pattern' if voicePred == 'Parkinson' else voicePred,
-            'final': final
-        })
-        records = list(db.predictions.find({'name': user_name}, {'_id': 0}))
-        df = pd.DataFrame(records)
-        if not df.empty:
-            df.columns = ['Date', 'Name', 'DrawingPrediction', 'VoicePrediction', 'FinalPrediction']
+        conn = get_conn()
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO predictions (date, name, drawing_pred, voice_pred, final_pred) VALUES (%s,%s,%s,%s,%s)",
+            (now.strftime("%d/%m/%Y %H:%M:%S"), user_name,
+             'Weak Pattern' if pred == 'Parkinson' else pred,
+             'Weak Pattern' if voicePred == 'Parkinson' else voicePred,
+             final)
+        )
+        conn.commit()
+        cur.execute("SELECT date, name, drawing_pred, voice_pred, final_pred FROM predictions WHERE name=%s", (user_name,))
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        df = pd.DataFrame(rows, columns=['Date', 'Name', 'DrawingPrediction', 'VoicePrediction', 'FinalPrediction'])
     except Exception as e:
-        print(f"DEBUG: Dashboard DB error: {e}")
+        print(f"DEBUG: Dashboard error: {e}")
         df = pd.DataFrame(columns=['Date', 'Name', 'DrawingPrediction', 'VoicePrediction', 'FinalPrediction'])
 
     now_date = now.strftime("%d %B %Y, %H:%M")
@@ -199,7 +234,7 @@ def dashboard():
                            titles=df.columns.values, now_date=now_date)
 
 
-# ── Image / Spiral Test ───────────────────────────────────────────────────────
+# ── Spiral/Image Test ─────────────────────────────────────────────────────────
 @app.route('/image', methods=['GET', 'POST'])
 @login_required
 def image():
@@ -216,7 +251,7 @@ def image():
                     f.write(data)
                 return redirect(url_for('image_test'))
             except Exception as e:
-                print(f"DEBUG: Error saving canvas drawing: {e}")
+                print(f"DEBUG: Canvas save error: {e}")
         f = request.files.get('doc')
         if f:
             f.save(os.path.join(savepath, secure_filename('test.jpg')))
