@@ -11,6 +11,7 @@ joblib
 
 # ─── Image Processing ──────────────────────────────────────────
 Pillow
+scikit-image
 opencv-python-headless
 
 # ─── Deep Learning (Drawing CNN) ───────────────────────────────
