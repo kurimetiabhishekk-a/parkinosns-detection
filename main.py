@@ -19,6 +19,31 @@ app.config['SESSION_COOKIE_SECURE'] = False
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 
 
+def init_db():
+    """Create all required tables if they don't exist. Safe to call on every startup."""
+    con = sqlite3.connect('mydatabase.db')
+    cursor = con.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS Users (
+            Date text, Name text, Email text, password text, pet text
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS FinalPred (
+            Date text, Name text, DrawingPrediction text,
+            VoicePrediction text, FinalPrediction text
+        )
+    """)
+    con.commit()
+    con.close()
+    # Ensure runtime folders exist
+    os.makedirs('static/img', exist_ok=True)
+    os.makedirs('upload', exist_ok=True)
+    print("DEBUG: Database initialised.")
+
+init_db()
+
+
 @app.context_processor
 def inject_now():
 	return {
