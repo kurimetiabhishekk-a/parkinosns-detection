@@ -1,0 +1,10 @@
+# Full (optional) requirements for ML-enabled behavior
+Flask
+pandas
+numpy
+Pillow
+joblib
+scikit-learn
+tensorflow
+praat-parselmouth
+opencv-python

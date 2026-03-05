@@ -1,0 +1,693 @@
+{% extends 'layout.html' %}
+{% block content %}
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+	* {
+		box-sizing: border-box;
+	}
+
+	.spiral-page {
+		font-family: 'Inter', sans-serif;
+		padding: 24px 20px;
+		width: 100%;
+		margin: 0 auto;
+	}
+
+	/* ── Hero ── */
+	.spiral-hero {
+		text-align: center;
+		margin-bottom: 32px;
+	}
+
+	.spiral-badge {
+		display: inline-flex;
+		align-items: center;
+		gap: 7px;
+		background: rgba(99, 102, 241, 0.1);
+		border: 1px solid rgba(99, 102, 241, 0.25);
+		color: #818cf8;
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		padding: 5px 14px;
+		border-radius: 50px;
+		margin-bottom: 14px;
+	}
+
+	.spiral-hero h1 {
+		font-size: 32px;
+		font-weight: 800;
+		color: #1e293b;
+		margin-bottom: 8px;
+		letter-spacing: -0.5px;
+	}
+
+	.spiral-hero p {
+		font-size: 15px;
+		color: #64748b;
+	}
+
+	/* ── Main layout ── */
+	.spiral-layout {
+		display: grid;
+		grid-template-columns: 1fr 340px;
+		gap: 32px;
+		align-items: start;
+		max-width: 1250px;
+		margin: 0 auto;
+	}
+
+	@media (max-width: 1100px) {
+		.spiral-layout {
+			grid-template-columns: 1fr;
+		}
+	}
+
+	/* Dataset info styles */
+	.section-card {
+		background: #fff;
+		border-radius: 20px;
+		box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+		border: 1px solid #e2e8f0;
+		overflow: hidden;
+		margin-bottom: 24px;
+	}
+
+	.card-header-custom {
+		padding: 16px 24px;
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		border-bottom: 1px solid #f1f5f9;
+		font-weight: 700;
+		font-size: 15px;
+		color: #1e293b;
+	}
+
+	.card-body-custom {
+		padding: 24px;
+	}
+
+	.model-row {
+		display: flex;
+		align-items: flex-start;
+		gap: 16px;
+		padding: 16px 0;
+		border-bottom: 1px solid #f1f5f9;
+	}
+
+	.model-row:last-child {
+		border-bottom: none;
+		padding-bottom: 0;
+	}
+
+	.model-icon {
+		width: 44px;
+		height: 44px;
+		border-radius: 12px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 18px;
+		flex-shrink: 0;
+	}
+
+	.dataset-badge {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		background: linear-gradient(135deg, #6366f1, #8b5cf6);
+		color: #fff;
+		border-radius: 50px;
+		padding: 6px 14px;
+		font-size: 11px;
+		font-weight: 700;
+		text-decoration: none;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		margin-right: 6px;
+	}
+
+	.tag {
+		display: inline-block;
+		background: #f0f4ff;
+		color: #6366f1;
+		border-radius: 6px;
+		padding: 4px 10px;
+		font-size: 11px;
+		font-weight: 700;
+		margin: 3px;
+	}
+
+	/* Missing Cards Styling */
+	.canvas-card {
+		background: #fff;
+		border-radius: 24px;
+		border: 1px solid rgba(255, 255, 255, 0.6);
+		box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
+		padding: 32px;
+	}
+
+	.canvas-card-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 24px;
+	}
+
+	.canvas-card-title {
+		font-size: 18px;
+		font-weight: 800;
+		color: #1e293b;
+		display: flex;
+		align-items: center;
+		gap: 10px;
+	}
+
+	.instruction-strip {
+		background: rgba(99, 102, 241, 0.05);
+		border-left: 4px solid #6366f1;
+		padding: 12px 16px;
+		border-radius: 0 8px 8px 0;
+		font-size: 14px;
+		color: #475569;
+		margin-bottom: 24px;
+		display: flex;
+		align-items: center;
+		gap: 10px;
+	}
+
+	.tips-panel {
+		background: #fff;
+		border-radius: 20px;
+		padding: 24px;
+		box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+		border: 1px solid #e2e8f0;
+		height: fit-content;
+	}
+
+	.tips-header {
+		font-size: 15px;
+		font-weight: 700;
+		color: #1e293b;
+		margin-bottom: 20px;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.tip-item {
+		display: flex;
+		gap: 12px;
+		margin-bottom: 16px;
+	}
+
+	.tip-num {
+		background: #f1f5f9;
+		color: #64748b;
+		width: 24px;
+		height: 24px;
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 12px;
+		font-weight: 700;
+		flex-shrink: 0;
+	}
+
+	.tip-text {
+		font-size: 13.5px;
+		color: #475569;
+		line-height: 1.5;
+	}
+
+	.disclaimer {
+		margin-top: 24px;
+		padding-top: 20px;
+		border-top: 1px solid #f1f5f9;
+		font-size: 12px;
+		color: #94a3b8;
+		display: flex;
+		gap: 8px;
+	}
+
+	.ctrl-btn {
+		border-radius: 12px;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.2s;
+		border: none;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 8px;
+	}
+
+	.ctrl-btn.primary {
+		background: linear-gradient(135deg, #6366f1, #8b5cf6);
+		color: #fff;
+		box-shadow: 0 4px 15px rgba(99, 102, 241, 0.35);
+	}
+
+	.result-card {
+		background: #f8fafc;
+		border-radius: 16px;
+		padding: 20px;
+		margin-top: 24px;
+		border: 1px solid #e2e8f0;
+	}
+
+	.result-label {
+		font-size: 13px;
+		color: #64748b;
+		margin-bottom: 8px;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+	}
+
+	/* Audio Upload Styling */
+	.upload-area {
+		border: 2.5px dashed #c7d2fe;
+		border-radius: 18px;
+		padding: 40px 20px;
+		text-align: center;
+		background: rgba(99, 102, 241, 0.03);
+		cursor: pointer;
+		position: relative;
+		transition: all 0.2s;
+		margin-bottom: 20px;
+	}
+
+	.upload-area:hover {
+		border-color: #8b5cf6;
+		background: rgba(139, 92, 246, 0.05);
+	}
+
+	.upload-area input[type="file"] {
+		position: absolute;
+		inset: 0;
+		opacity: 0;
+		cursor: pointer;
+		width: 100%;
+	}
+
+	.upload-icon {
+		font-size: 42px;
+		color: #818cf8;
+		margin-bottom: 12px;
+	}
+
+	.upload-text {
+		font-size: 16px;
+		font-weight: 700;
+		color: #1e293b;
+	}
+
+	.upload-subtext {
+		font-size: 13px;
+		color: #64748b;
+		margin-top: 4px;
+	}
+
+	.file-name-display {
+		margin-top: 14px;
+		font-size: 13.5px;
+		font-weight: 600;
+		color: #6366f1;
+		display: none;
+	}
+
+	/* Record Audio Feature */
+	.record-btn-wrap {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 12px;
+		margin-bottom: 24px;
+		padding-bottom: 24px;
+		border-bottom: 1px solid rgba(99, 102, 241, 0.1);
+	}
+
+	.btn-record {
+		background: #f1f5f9;
+		color: #475569;
+		border: 2px solid transparent;
+		padding: 12px 24px;
+		border-radius: 50px;
+		font-size: 14px;
+		font-weight: 700;
+		font-family: 'Inter', sans-serif;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		transition: all 0.3s;
+	}
+
+	.btn-record:hover {
+		background: #e2e8f0;
+		color: #1e293b;
+	}
+
+	.btn-record.recording {
+		background: #fef2f2;
+		color: #ef4444;
+		border-color: #fca5a5;
+		animation: pulseRecord 1.5s infinite;
+	}
+
+	.btn-record.recording i {
+		color: #ef4444;
+	}
+
+	.record-status {
+		font-size: 12px;
+		color: #64748b;
+	}
+
+	@keyframes pulseRecord {
+		0% {
+			box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+		}
+
+		70% {
+			box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+		}
+
+		100% {
+			box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+		}
+	}
+
+	.or-divider {
+		font-size: 12px;
+		font-weight: 700;
+		color: #94a3b8;
+		text-transform: uppercase;
+		letter-spacing: 1px;
+		position: relative;
+		text-align: center;
+		margin: -34px 0 20px 0;
+		background: #fff;
+		display: inline-block;
+		padding: 0 10px;
+		align-self: center;
+		z-index: 10;
+	}
+</style>
+
+<div class="spiral-page">
+
+	<!-- Hero -->
+	<div class="spiral-hero">
+		<div class="spiral-badge">
+			<i class="fas fa-microphone"></i>
+			Voice Test
+		</div>
+		<h1>Vocal Tremor Analysis</h1>
+		<p>Upload an audio recording (.wav) of sustained vowel phonation to screen for voice biomarkers of Parkinson's
+			Disease</p>
+	</div>
+
+	<div class="spiral-layout">
+		<!-- ── Left: Upload Card ── -->
+		<div class="canvas-card">
+			<div class="canvas-card-header">
+				<div class="canvas-card-title">
+					<i class="fas fa-file-audio"></i>
+					Audio Upload
+				</div>
+			</div>
+
+			<div class="instruction-strip">
+				<i class="fas fa-info-circle"></i>
+				For best results, upload clean audio of sustained 'ah' or 'o' sounds.
+			</div>
+
+			<div class="canvas-wrap" style="flex-direction: column; display: flex;">
+				<form id="voiceUploadForm" action="" method="post" enctype="multipart/form-data"
+					style="width: 100%; display: flex; flex-direction: column;">
+
+					<!-- Record Audio Section -->
+					<div class="record-btn-wrap">
+						<button type="button" class="btn-record" id="recordBtn">
+							<i class="fas fa-microphone"></i>
+							<span id="recordBtnText">Record Voice Sample</span>
+						</button>
+						<div class="record-status" id="recordStatus">Click to start a 5-second recording</div>
+					</div>
+
+					<div class="or-divider">OR</div>
+
+					<div class="upload-area" id="dropArea">
+						<i class="fas fa-cloud-upload-alt upload-icon"></i>
+						<div class="upload-text">Click or Drag &amp; Drop audio file here</div>
+						<div class="upload-subtext">WAV format supported. Max size 5MB.</div>
+						<input type="file" name="doc" id="audioInput" accept="audio/wav">
+						<div class="file-name-display" id="fileNameDisplay"><i class="fas fa-music mr-1"></i>
+							<span></span>
+						</div>
+					</div>
+
+					<button type="submit" name="uploadbutton" value="Detect PD" class="ctrl-btn primary"
+						style="width: 100%; padding: 14px; font-size: 15px;">
+						<i class="fas fa-search"></i> Analyse Voice Sample
+					</button>
+				</form>
+			</div>
+
+			{% if mgs %}
+			<div class="result-card">
+				<div class="result-label">Diagnosis Result</div>
+				<div class="result-value {% if 'Healthy' in mgs %}healthy{% else %}weak{% endif %}">
+					{% if 'Healthy' in mgs %}
+					<i class="fas fa-check-circle"></i>
+					{% else %}
+					<i class="fas fa-exclamation-circle"></i>
+					{% endif %}
+					{{ mgs }}
+				</div>
+				<div class="conf-row">
+					<div class="conf-label-row">
+						<span>Pattern Confidence</span>
+						<strong style="color:#6366f1;">{{ accuracy }}%</strong>
+					</div>
+					<div class="conf-bar"
+						style="height: 6px; background: #e2e8f0; border-radius: 10px; overflow: hidden; margin-top: 8px;">
+						<div class="conf-fill"
+							style="height: 100%; background: linear-gradient(90deg, #6366f1, #8b5cf6); border-radius: 10px; width: {{ accuracy|default(0) }}%;">
+						</div>
+					</div>
+				</div>
+			</div>
+			{% endif %}
+
+			<!-- Theory Components -->
+			<div class="card-header-custom" style="margin-top: 32px; border-top: 1px solid #f1f5f9; padding-top: 24px;">
+				<i class="fas fa-flask" style="color:#10b981;"></i> About ParkiSense Voice Test
+			</div>
+			<div class="card-body-custom" style="font-size:13.5px;color:#475569;line-height:1.75; padding-top: 12px;">
+				<p>
+					ParkiSense voice analysis works by examining vocal frequency stability. A Random Forest
+					classifier trained on the PC-GITA dataset extracts vocal biomarkers (Jitter, Shimmer,
+					Harmonicity) from an uploaded .wav file to screen for Parkinson's Disease early.
+				</p>
+				<p class="mb-0 mt-3"
+					style="font-size:12.5px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:12px;color:#9a3412;">
+					<i class="fas fa-exclamation-triangle mr-1"></i>
+					This tool is for <strong>screening purposes only</strong> and does not replace a professional
+					neurological evaluation.
+				</p>
+			</div>
+		</div>
+
+		<!-- ── Right: Tips Panel (Sidebar) ── -->
+		<div class="tips-panel">
+			<div class="tips-header">
+				<i class="fas fa-lightbulb"></i> Audio Instructions
+			</div>
+
+			<div class="tip-item">
+				<div class="tip-num">1</div>
+				<div class="tip-text">Ensure you are in a <strong>quiet room</strong> with minimal background noise.
+				</div>
+			</div>
+			<div class="tip-item">
+				<div class="tip-num">2</div>
+				<div class="tip-text">Record a sustained vowel sound like <strong>'ahhh'</strong> or
+					<strong>'oooh'</strong> for 3-5 seconds.
+				</div>
+			</div>
+			<div class="tip-item">
+				<div class="tip-num">3</div>
+				<div class="tip-text">Save the recording as a <strong>WAV format</strong> audio file.</div>
+			</div>
+			<div class="tip-item">
+				<div class="tip-num">4</div>
+				<div class="tip-text">Upload the file using the secure upload zone.</div>
+			</div>
+			<div class="tip-item">
+				<div class="tip-num">5</div>
+				<div class="tip-text">Click <strong>Analyse Voice Sample</strong>. Our AI model will extract vocal
+					biomarkers.</div>
+			</div>
+
+			<div class="disclaimer">
+				<i class="fas fa-exclamation-triangle"></i>
+				This is a screening tool only. Results are <strong>not a clinical diagnosis</strong>.
+			</div>
+		</div>
+	</div>
+
+</div>
+
+<script>
+	// Audio file update visually
+	document.getElementById('audioInput').addEventListener('change', function (e) {
+		if (this.files && this.files.length > 0) {
+			updateUploadUI(this.files[0].name);
+		}
+	});
+
+	function updateUploadUI(fileName) {
+		let display = document.getElementById('fileNameDisplay');
+		display.querySelector('span').textContent = fileName;
+		display.style.display = 'block';
+		document.getElementById('dropArea').style.borderColor = '#10b981';
+		document.getElementById('dropArea').style.background = 'rgba(16,185,129,0.03)';
+		let ui = document.querySelector('.upload-icon');
+		if (ui) {
+			ui.className = 'fas fa-check-circle upload-icon';
+			ui.style.color = '#10b981';
+		}
+		let txt = document.querySelector('.upload-text');
+		if (txt) txt.textContent = 'File ready to analyse';
+		let sub = document.querySelector('.upload-subtext');
+		if (sub) sub.style.display = 'none';
+
+		let recStatus = document.getElementById('recordStatus');
+		if (recStatus) recStatus.innerHTML = '<span style="color:#10b981;"><i class="fas fa-check"></i> Audio captured</span>';
+	}
+
+	// Handle drag and drop styling
+	const dropArea = document.getElementById('dropArea');
+
+	['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+		dropArea.addEventListener(eventName, preventDefaults, false);
+	});
+
+	function preventDefaults(e) {
+		e.preventDefault();
+		e.stopPropagation();
+	}
+
+	['dragenter', 'dragover'].forEach(eventName => {
+		dropArea.addEventListener(eventName, highlight, false);
+	});
+
+	['dragleave', 'drop'].forEach(eventName => {
+		dropArea.addEventListener(eventName, unhighlight, false);
+	});
+
+	function highlight(e) {
+		dropArea.style.borderColor = '#6366f1';
+		dropArea.style.background = 'rgba(99,102,241,0.08)';
+	}
+
+	function unhighlight(e) {
+		if (document.getElementById('audioInput').files.length === 0) {
+			dropArea.style.borderColor = '#c7d2fe';
+			dropArea.style.background = 'rgba(99,102,241,0.03)';
+		}
+	}
+
+	// Web Audio Recording Logic
+	let mediaRecorder;
+	let audioChunks = [];
+	const recordBtn = document.getElementById('recordBtn');
+	const recordBtnText = document.getElementById('recordBtnText');
+	const recordStatus = document.getElementById('recordStatus');
+	let isRecording = false;
+
+	if (recordBtn) {
+		recordBtn.addEventListener('click', async () => {
+			if (isRecording) {
+				// If clicked while recording, stop immediately
+				if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+					mediaRecorder.stop();
+				}
+				return;
+			}
+
+			try {
+				const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+				mediaRecorder = new MediaRecorder(stream);
+				audioChunks = [];
+
+				mediaRecorder.ondataavailable = event => {
+					audioChunks.push(event.data);
+				};
+
+				mediaRecorder.onstart = () => {
+					isRecording = true;
+					recordBtn.classList.add('recording');
+					recordBtnText.textContent = 'Recording...';
+
+					// Countdown timer
+					let timeLeft = 5;
+					recordStatus.textContent = `Recording: ${timeLeft}s remaining`;
+
+					const timer = setInterval(() => {
+						timeLeft--;
+						if (timeLeft > 0) {
+							recordStatus.textContent = `Recording: ${timeLeft}s remaining`;
+						} else {
+							clearInterval(timer);
+							if (mediaRecorder.state !== 'inactive') {
+								mediaRecorder.stop();
+							}
+						}
+					}, 1000);
+
+					// Stop tracks on completion
+					mediaRecorder.onstop = () => {
+						clearInterval(timer);
+						isRecording = false;
+						recordBtn.classList.remove('recording');
+						recordBtnText.textContent = 'Record Again';
+						recordStatus.textContent = 'Processing recording...';
+
+						stream.getTracks().forEach(track => track.stop());
+
+						const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+						// Create a file from blob
+						const file = new File([audioBlob], "recorded_voice_sample.wav", { type: 'audio/wav' });
+
+						// Create DataTransfer object to simulate file input
+						const dt = new DataTransfer();
+						dt.items.add(file);
+
+						// Assign to existing input
+						document.getElementById('audioInput').files = dt.files;
+						updateUploadUI('recorded_voice_sample.wav');
+					};
+				};
+
+				mediaRecorder.start();
+
+			} catch (err) {
+				console.error("Error accessing microphone: ", err);
+				recordStatus.textContent = "Error: Microphone access denied.";
+				recordStatus.style.color = "#dc2626";
+			}
+		});
+	}
+</script>
+
+{% endblock %}
+```

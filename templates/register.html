@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="ParkiSense – Create your secure account for advanced neurological screening.">
+    <title>ParkiSense – Register</title>
+    <link href="{{ url_for('static', filename='vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            height: 100%;
+            background: #05050f;
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ── Page Layout ───────────────────────── */
+        .page {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+            min-height: 700px;
+        }
+
+        /* ──────────────────────────────────────────
+           LEFT PANEL – Animated Brain
+        ────────────────────────────────────────── */
+        .left-panel {
+            flex: 1;
+            position: relative;
+            background: radial-gradient(circle at center, #1e1b4b 0%, #05050f 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-end;
+            /* Bring closer to center line */
+            padding: 3rem 4rem 3rem 3rem;
+            /* Extra padding-right to push away from screen edge */
+            overflow: hidden;
+        }
+
+        /* Ambient glowing orbs */
+        .left-panel::after {
+            content: '';
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, transparent 70%);
+            top: -200px;
+            left: -200px;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        /* Brain Image Container */
+        .brain-container {
+            position: relative;
+            width: 100%;
+            max-width: 480px;
+            /* Constrain width */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem;
+            z-index: 10;
+        }
+
+        .brain-image {
+            width: 100%;
+            height: auto;
+            max-width: 420px;
+            filter: drop-shadow(0 0 40px rgba(99, 102, 241, 0.4));
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0px) scale(1);
+            }
+
+            50% {
+                transform: translateY(-15px) scale(1.01);
+            }
+        }
+
+        .left-text {
+            text-align: center;
+            width: 100%;
+        }
+
+        .left-text h2 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            color: #ffffff;
+            line-height: 1.1;
+            margin-bottom: 1.2rem;
+            background: linear-gradient(135deg, #fff 0%, rgba(255, 255, 255, 0.7) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            /* Compatibility fix */
+            -webkit-text-fill-color: transparent;
+        }
+
+        .left-text p {
+            font-size: 1.05rem;
+            color: rgba(255, 255, 255, 0.6);
+            line-height: 1.6;
+            margin-top: 1rem;
+        }
+
+        /* Word Animation - using the same Pulse logic */
+        /* Modern Masked Reveal Animation */
+        .word-anim {
+            display: inline-block;
+            opacity: 0;
+            transform: translateY(20px) skewY(2deg);
+            filter: blur(10px);
+            animation: modernReveal 2.5s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+        }
+
+        @keyframes modernReveal {
+            to {
+                opacity: 1;
+                transform: translateY(0) skewY(0);
+                filter: blur(0);
+            }
+        }
+
+        @keyframes brandPulse {
+
+            0%,
+            100% {
+                opacity: 0;
+                transform: translateY(10px);
+                filter: blur(8px);
+            }
+
+            20%,
+            80% {
+                opacity: 1;
+                transform: translateY(0);
+                filter: blur(0);
+            }
+        }
+
+        /* ──────────────────────────────────────────
+           RIGHT PANEL – Register Form
+        ────────────────────────────────────────── */
+        .right-panel {
+            flex: 1;
+            background: #0e0e1a;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            /* Bring closer to center line */
+            justify-content: center;
+            padding: 3rem 3rem 3rem 4rem;
+            /* Extra padding-left to push away from screen edge */
+            position: relative;
+        }
+
+        /* Top brand name */
+        .brand-name {
+            font-size: 2.2rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 2.5rem;
+            display: inline-block;
+            letter-spacing: -0.8px;
+            animation: brandPulse 2s infinite;
+        }
+
+        @keyframes brandPulse {
+
+            0%,
+            100% {
+                opacity: 0;
+                transform: translateY(10px);
+                filter: blur(8px);
+            }
+
+            20%,
+            80% {
+                opacity: 1;
+                transform: translateY(0);
+                filter: blur(0);
+            }
+        }
+
+        .form-container {
+            width: 100%;
+            max-width: 440px;
+        }
+
+        .form-eyebrow {
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            color: #6366f1;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-heading {
+            font-size: 1.85rem;
+            font-weight: 800;
+            color: #ffffff;
+            margin-bottom: 0.35rem;
+            letter-spacing: -0.5px;
+        }
+
+        .form-subtext {
+            font-size: 0.82rem;
+            color: rgba(255, 255, 255, 0.38);
+            margin-bottom: 2rem;
+        }
+
+        /* Flash messages */
+        .flash-msg {
+            padding: 0.65rem 1rem;
+            border-radius: 10px;
+            font-size: 0.81rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .flash-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.22);
+            color: #fca5a5;
+        }
+
+        .flash-success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.22);
+            color: #6ee7b7;
+        }
+
+        /* Input Fields */
+        .input-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 1rem;
+        }
+
+        .form-row .input-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        .input-label {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.55);
+            margin-bottom: 0.45rem;
+            display: block;
+        }
+
+        .form-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 0.82rem 1.1rem;
+            font-size: 0.87rem;
+            font-family: 'Inter', sans-serif;
+            color: #fff;
+            outline: none;
+            transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+        }
+
+        .form-input::placeholder {
+            color: rgba(255, 255, 255, 0.22);
+        }
+
+        .form-input:focus {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+
+        /* Submit Button */
+        .btn-register {
+            width: 100%;
+            padding: 0.88rem;
+            border-radius: 10px;
+            border: none;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: #fff;
+            font-size: 0.95rem;
+            font-weight: 700;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            letter-spacing: 0.01em;
+            box-shadow: 0 8px 24px -4px rgba(99, 102, 241, 0.5);
+            transition: all 0.22s ease;
+            margin-top: 1rem;
+        }
+
+        .btn-register:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 14px 32px -4px rgba(99, 102, 241, 0.6);
+        }
+
+        /* Divider & Links */
+        .divider {
+            height: 1px;
+            background: rgba(255, 255, 255, 0.07);
+            margin: 1.5rem 0;
+        }
+
+        .footer-links {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .footer-links a {
+            font-size: 0.82rem;
+            color: #818cf8;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.2s;
+        }
+
+        .footer-links a:hover {
+            color: #c084fc;
+        }
+
+        /* ── Modern Animations ─────────────────────── */
+        @keyframes revealUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .reveal-text {
+            animation: revealUp 0.8s cubic-bezier(0.23, 1, 0.32, 1) both;
+        }
+
+        .delay-1 {
+            animation-delay: 0.2s;
+        }
+
+        .delay-2 {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .form-container {
+            animation: fadeInUp 0.6s ease both;
+        }
+
+        @media (max-width: 1024px) {
+            .brain-container {
+                flex-direction: column;
+                text-align: center;
+                gap: 2rem;
+            }
+
+            .left-text {
+                text-align: center;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .left-panel {
+                display: none;
+            }
+
+            .right-panel {
+                padding: 2rem 1.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page">
+
+        <!-- ══════════════════════════════════════
+             LEFT PANEL — Animated Brain
+        ═══════════════════════════════════════ -->
+        <div class="left-panel">
+            <div class="brain-container">
+                <img src="{{ url_for('static', filename='img/login.png') }}" alt="AI Brain Analysis"
+                    class="brain-image">
+
+                <div class="left-text">
+                    <h2>Early Detection<br>Saves Lives</h2>
+                    <p id="animatedPara">
+                        Advanced machine learning algorithms analyze voice patterns and handwriting to detect early
+                        signs of Parkinson's Disease.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                const para = document.getElementById('animatedPara');
+                if (para) {
+                    const words = para.innerText.split(' ');
+                    para.innerHTML = words.map((word, i) =>
+                        `<span class="word-anim" style="animation-delay: ${i * 0.3}s">${word}</span>`
+                    ).join(' ');
+                }
+            });
+        </script>
+
+        <!-- ══════════════════════════════════════
+             RIGHT PANEL — Register Form
+        ═══════════════════════════════════════ -->
+        <div class="right-panel">
+
+            <div class="form-container">
+                <!-- Brand -->
+                <div class="brand-name">ParkiSense</div>
+                <div class="form-eyebrow">Secure Join</div>
+                <h1 class="form-heading">Create an Account</h1>
+                <p class="form-subtext">Sign up to start your secure session</p>
+
+                {% if error %}
+                <div class="flash-msg flash-error">
+                    <i class="fas fa-exclamation-circle"></i>
+                    {{ error }}
+                </div>
+                {% endif %}
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                {% for category, message in messages %}
+                <div class="flash-msg flash-{{ category }}">
+                    <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-circle' }}"></i>
+                    {{ message }}
+                </div>
+                {% endfor %}
+                {% endif %}
+                {% endwith %}
+
+                <form action="/register" method="POST">
+                    <input type="hidden" name="sub" value="Submit">
+
+                    <div class="input-group">
+                        <label class="input-label">Full Name</label>
+                        <input type="text" class="form-input" name="name" placeholder="John Doe" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label">Email Address</label>
+                        <input type="email" class="form-input" name="email" placeholder="name@example.com" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="input-group">
+                            <label class="input-label">Password</label>
+                            <input type="password" class="form-input" name="password" placeholder="••••••••" required>
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Confirm Password</label>
+                            <input type="password" class="form-input" name="rpassword" placeholder="••••••••" required>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label">Security Question: What is your pet's name?</label>
+                        <input type="text" class="form-input" name="pet" placeholder="Your pet's name" required>
+                    </div>
+
+                    <button type="submit" class="btn-register">Register Account</button>
+                </form>
+
+                <div class="divider"></div>
+
+                <div class="footer-links">
+                    <a href="/forgot">Forgot Password?</a>
+                    <a href="/login">Already have an account? Login!</a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</body>
+
+</html>

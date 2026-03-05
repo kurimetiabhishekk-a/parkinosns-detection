@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="ParkiSense – Early detection of Parkinson's with AI precision.">
+    <title>ParkiSense – Sign In</title>
+    <link href="{{ url_for('static', filename='vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            height: 100%;
+            background: #05050f;
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ── Page Layout ───────────────────────── */
+        .page {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+            min-height: 600px;
+        }
+
+        /* ──────────────────────────────────────────
+           LEFT PANEL – Animated Brain
+        ────────────────────────────────────────── */
+        /* Starfield subtle dots */
+        .left-panel::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            /* Optional darkening overlay */
+        }
+
+        .left-panel {
+            flex: 0 0 49%;
+            position: relative;
+            background: radial-gradient(circle at top left, #1e1b4b, #05050f 80%);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 2.5rem;
+            overflow: hidden;
+        }
+
+        /* Ambient glowing orbs */
+        .left-panel::after {
+            content: '';
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
+            top: -100px;
+            left: -100px;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .left-text h2 {
+            position: relative;
+            z-index: 10;
+            font-size: 1.7rem;
+            font-weight: 800;
+            color: #ffffff;
+            line-height: 1.25;
+            margin-bottom: 0.6rem;
+        }
+
+        .left-text p {
+            position: relative;
+            z-index: 10;
+            font-size: 0.82rem;
+            color: rgba(255, 255, 255, 0.5);
+            line-height: 1.65;
+            max-width: 320px;
+        }
+
+        /* ──────────────────────────────────────────
+           RIGHT PANEL – Login Form
+        ────────────────────────────────────────── */
+        .right-panel {
+            flex: 1;
+            background: #0e0e1a;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            /* Move form towards the center splitter */
+            justify-content: center;
+            padding: 3rem 3rem 3rem 4rem;
+            /* Extra padding-left for balance */
+            position: relative;
+        }
+
+        /* Top brand name */
+        .brand-name {
+            font-size: 2.2rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 2.5rem;
+            display: inline-block;
+            letter-spacing: -0.8px;
+            animation: brandPulse 2s infinite;
+        }
+
+        @keyframes brandPulse {
+
+            0%,
+            100% {
+                opacity: 0;
+                transform: translateY(10px);
+                filter: blur(8px);
+            }
+
+            20%,
+            80% {
+                opacity: 1;
+                transform: translateY(0);
+                filter: blur(0);
+            }
+        }
+
+        .form-container {
+            width: 100%;
+            max-width: 380px;
+        }
+
+        .form-eyebrow {
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            color: #6366f1;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-heading {
+            font-size: 1.85rem;
+            font-weight: 800;
+            color: #ffffff;
+            margin-bottom: 0.35rem;
+            letter-spacing: -0.5px;
+        }
+
+        .form-subtext {
+            font-size: 0.82rem;
+            color: rgba(255, 255, 255, 0.38);
+            margin-bottom: 2rem;
+        }
+
+        /* Flash messages */
+        .flash-msg {
+            padding: 0.65rem 1rem;
+            border-radius: 10px;
+            font-size: 0.81rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .flash-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.22);
+            color: #fca5a5;
+        }
+
+        .flash-success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.22);
+            color: #6ee7b7;
+        }
+
+        /* Input Fields */
+        .input-group {
+            margin-bottom: 1rem;
+        }
+
+        .input-label {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.55);
+            margin-bottom: 0.45rem;
+            display: block;
+        }
+
+        .input-wrap {
+            position: relative;
+        }
+
+        .input-wrap .input-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: rgba(255, 255, 255, 0.25);
+            font-size: 0.82rem;
+            pointer-events: none;
+        }
+
+        .form-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 0.82rem 1rem 0.82rem 2.6rem;
+            font-size: 0.87rem;
+            font-family: 'Inter', sans-serif;
+            color: #fff;
+            outline: none;
+            transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+        }
+
+        .form-input::placeholder {
+            color: rgba(255, 255, 255, 0.22);
+        }
+
+        .form-input:focus {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+
+        /* Remember me + Forgot password row */
+        .form-row-aux {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+
+        .remember-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .remember-wrap input[type="checkbox"] {
+            width: 15px;
+            height: 15px;
+            accent-color: #6366f1;
+            cursor: pointer;
+        }
+
+        .remember-wrap label {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.45);
+            cursor: pointer;
+        }
+
+        .forgot-link {
+            font-size: 0.8rem;
+            color: #818cf8;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .forgot-link:hover {
+            color: #c084fc;
+            text-decoration: none;
+        }
+
+        /* Sign In Button */
+        .btn-signin {
+            width: 100%;
+            padding: 0.88rem;
+            border-radius: 10px;
+            border: none;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: #fff;
+            font-size: 0.95rem;
+            font-weight: 700;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            letter-spacing: 0.01em;
+            box-shadow: 0 8px 24px -4px rgba(99, 102, 241, 0.5);
+            transition: all 0.22s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn-signin:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 14px 32px -4px rgba(99, 102, 241, 0.6);
+        }
+
+        .btn-signin:active {
+            transform: translateY(0);
+        }
+
+        /* OR Divider */
+        .or-divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 1.4rem 0 1rem;
+        }
+
+        .or-divider::before,
+        .or-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.07);
+        }
+
+        .or-text {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.25);
+            font-weight: 500;
+        }
+
+        /* Sign up link */
+        .signup-text {
+            text-align: center;
+            font-size: 0.82rem;
+            color: rgba(255, 255, 255, 0.35);
+        }
+
+        .signup-text a {
+            color: #818cf8;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.2s;
+        }
+
+        .signup-text a:hover {
+            color: #c084fc;
+        }
+
+        /* ── Modern Animations ─────────────────────── */
+        @keyframes revealUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .reveal-text {
+            animation: revealUp 0.8s cubic-bezier(0.23, 1, 0.32, 1) both;
+        }
+
+        .delay-1 {
+            animation-delay: 0.2s;
+        }
+
+        .delay-2 {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .form-container {
+            animation: fadeInUp 0.6s ease both;
+        }
+
+        @media (max-width: 1024px) {
+            .brain-container {
+                flex-direction: column;
+                text-align: center;
+                gap: 2rem;
+            }
+
+            .left-text {
+                text-align: center;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .left-panel {
+                display: none;
+            }
+
+            .right-panel {
+                padding: 2rem 1.5rem;
+            }
+        }
+    </style>
+    <style>
+        .left-panel {
+            flex: 1;
+            position: relative;
+            background: radial-gradient(circle at center, #1e1b4b 0%, #05050f 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-end;
+            /* Move content towards the center splitter */
+            padding: 3rem 4rem 3rem 3rem;
+            /* Extra padding-right for balance */
+            overflow: hidden;
+        }
+
+        /* Brain Image Container */
+        .brain-container {
+            position: relative;
+            width: 100%;
+            max-width: 480px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem;
+            z-index: 10;
+        }
+
+        .brain-image {
+            width: 100%;
+            height: auto;
+            max-width: 420px;
+            filter: drop-shadow(0 0 40px rgba(99, 102, 241, 0.4));
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0px) scale(1);
+            }
+
+            50% {
+                transform: translateY(-15px) scale(1.01);
+            }
+        }
+
+        .left-text {
+            text-align: center;
+            width: 100%;
+        }
+
+        .left-text h2 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            color: #ffffff;
+            line-height: 1.1;
+            margin-bottom: 1.2rem;
+            background: linear-gradient(135deg, #fff 0%, rgba(255, 255, 255, 0.7) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .left-text p {
+            font-size: 1.05rem;
+            color: rgba(255, 255, 255, 0.6);
+            line-height: 1.6;
+            margin-top: 1rem;
+        }
+
+        /* Word Animation - using the same Pulse logic */
+        /* Modern Masked Reveal Animation */
+        .word-anim {
+            display: inline-block;
+            opacity: 0;
+            transform: translateY(20px) skewY(2deg);
+            filter: blur(10px);
+            animation: modernReveal 2.5s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+
+        }
+
+        @keyframes modernReveal {
+            to {
+                opacity: 1;
+                transform: translateY(0) skewY(0);
+                filter: blur(0);
+            }
+        }
+
+        @keyframes brandPulse {
+
+            0%,
+            100% {
+                opacity: 0;
+                transform: translateY(10px);
+                filter: blur(8px);
+            }
+
+            20%,
+            80% {
+                opacity: 1;
+                transform: translateY(0);
+                filter: blur(0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page">
+
+        <!-- ══════════════════════════════════════
+             LEFT PANEL — Animated Brain
+        ═══════════════════════════════════════ -->
+        <div class="left-panel">
+            <div class="brain-container">
+                <img src="{{ url_for('static', filename='img/login.png') }}" alt="AI Brain Analysis"
+                    class="brain-image reveal-text">
+
+                <div class="left-text">
+                    <h2 class="reveal-text delay-1">Early Detection<br>Saves Lives</h2>
+                    <p id="animatedPara" class="reveal-text delay-2">
+                        <!-- Words will be injected by JS for animation -->
+                        Advanced machine learning algorithms analyze voice patterns and handwriting to detect early
+                        signs of Parkinson's Disease.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // Helper to wrap words for animation
+            document.addEventListener('DOMContentLoaded', function () {
+                const para = document.getElementById('animatedPara');
+                if (para) {
+                    const words = para.innerText.split(' ');
+                    para.innerHTML = words.map((word, i) =>
+                        `<span class="word-anim" style="animation-delay: ${i * 0.3}s">${word}</span>`
+                    ).join(' ');
+                }
+            });
+        </script>
+
+        <!-- ══════════════════════════════════════
+             RIGHT PANEL — Login Form
+        ═══════════════════════════════════════ -->
+        <div class="right-panel">
+
+            <div class="form-container">
+                <!-- Brand -->
+                <div class="brand-name">ParkiSense</div>
+                <div class="form-eyebrow">Welcome Back</div>
+                <h1 class="form-heading">Sign in to continue</h1>
+                <p class="form-subtext">Enter your credentials to access your account</p>
+
+                {% if error %}
+                <div class="flash-msg flash-error">
+                    <i class="fas fa-exclamation-circle"></i>
+                    {{ error }}
+                </div>
+                {% endif %}
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                {% for category, message in messages %}
+                <div class="flash-msg flash-{{ category }}">
+                    <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-circle' }}"></i>
+                    {{ message }}
+                </div>
+                {% endfor %}
+                {% endif %}
+                {% endwith %}
+
+                <form action="/login" method="POST" autocomplete="on">
+                    <!-- Email -->
+                    <div class="input-group">
+                        <label class="input-label">Email Address</label>
+                        <div class="input-wrap">
+                            <span class="input-icon"><i class="fas fa-envelope"></i></span>
+                            <input type="email" class="form-input" name="email" id="loginEmail"
+                                placeholder="name@example.com" required autocomplete="email">
+                        </div>
+                    </div>
+
+                    <!-- Password -->
+                    <div class="input-group">
+                        <label class="input-label">Password</label>
+                        <div class="input-wrap">
+                            <span class="input-icon"><i class="fas fa-lock"></i></span>
+                            <input type="password" class="form-input" name="password" id="loginPassword"
+                                placeholder="Enter your password" required autocomplete="current-password">
+                        </div>
+                    </div>
+
+                    <!-- Remember + Forgot -->
+                    <div class="form-row-aux">
+                        <div class="remember-wrap">
+                            <input type="checkbox" id="rememberMe" name="remember">
+                            <label for="rememberMe">Remember me</label>
+                        </div>
+                        <a href="/forgot" class="forgot-link">Forgot password?</a>
+                    </div>
+
+                    <!-- Submit -->
+                    <button type="submit" class="btn-signin">
+                        Sign In <i class="fas fa-arrow-right"></i>
+                    </button>
+                </form>
+
+                <div class="or-divider"><span class="or-text">or</span></div>
+
+                <p class="signup-text">
+                    Don't have an account? <a href="/register">Create one</a>
+                </p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        /* Animations removed */
+    </script>
+
+</body>
+
+</html>

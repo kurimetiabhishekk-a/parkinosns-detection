@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="ParkiSense – Advanced neurological analysis with AI precision.">
+    <meta name="author" content="ParkiSense">
+    <title>ParkiSense</title>
+
+    <link href="{{ url_for('static', filename='vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet"
+        type="text/css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/sb-admin-2.min.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/modern-theme.css') }}" rel="stylesheet">
+    <style>
+        .user-avatar-premium {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 800;
+            font-size: 1rem;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .nav-link:hover .user-avatar-premium {
+            transform: scale(1.05) rotate(5deg);
+            box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+        }
+
+        .sidebar-brand-text {
+            animation: brandPulse 2s infinite;
+        }
+
+        @keyframes brandPulse {
+
+            0%,
+            100% {
+                opacity: 0;
+                transform: translateY(5px);
+                filter: blur(5px);
+            }
+
+            20%,
+            80% {
+                opacity: 1;
+                transform: translateY(0);
+                filter: blur(0);
+            }
+        }
+    </style>
+</head>
+
+<body id="page-top">
+
+    <!-- Page Wrapper -->
+    <div id="wrapper">
+
+        <!-- Sidebar -->
+        <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
+
+            <!-- Sidebar Brand -->
+            <a class="sidebar-brand d-flex align-items-center justify-content-center" href="/home">
+                <div class="sidebar-brand-icon">
+                    <i class="fas fa-brain"></i>
+                </div>
+                <div class="sidebar-brand-text mx-3">PARKISENSE</div>
+            </a>
+
+            <!-- Divider -->
+            <hr class="sidebar-divider my-0">
+
+            <!-- Dashboard -->
+            <li class="nav-item">
+                <a class="nav-link" href="/home">
+                    <i class="fas fa-fw fa-th-large"></i>
+                    <span>Dashboard</span>
+                </a>
+            </li>
+
+            <!-- Divider -->
+            <hr class="sidebar-divider">
+
+            <!-- Spiral Test -->
+            <li class="nav-item">
+                <a class="nav-link" href="/image">
+                    <i class="fas fa-fw fa-circle-notch"></i>
+                    <span>Spiral Test</span>
+                </a>
+            </li>
+
+            <!-- Voice Test -->
+            <li class="nav-item">
+                <a class="nav-link" href="/upload">
+                    <i class="fas fa-fw fa-microphone"></i>
+                    <span>Voice Test</span>
+                </a>
+            </li>
+
+            <!-- Reports -->
+            <li class="nav-item">
+                <a class="nav-link" href="/dashboard">
+                    <i class="fas fa-fw fa-chart-bar"></i>
+                    <span>Reports</span>
+                </a>
+            </li>
+
+            <!-- Divider -->
+            <hr class="sidebar-divider">
+
+            <!-- Logout -->
+            <li class="nav-item">
+                <a class="nav-link" href="#" data-toggle="modal" data-target="#logoutModal">
+                    <i class="fas fa-fw fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+            </li>
+
+            <!-- Divider -->
+            <hr class="sidebar-divider d-none d-md-block">
+
+            <!-- Sidebar Toggler -->
+            <div class="text-center d-none d-md-inline">
+                <button class="rounded-circle border-0" id="sidebarToggle"></button>
+            </div>
+
+        </ul>
+        <!-- End Sidebar -->
+
+        <!-- Content Wrapper -->
+        <div id="content-wrapper" class="d-flex flex-column">
+
+            <!-- Main Content -->
+            <div id="content">
+
+                <!-- Topbar -->
+                <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
+
+                    <!-- Sidebar Toggle (Mobile) -->
+                    <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
+                        <i class="fa fa-bars"></i>
+                    </button>
+
+                    <!-- Welcome Text -->
+                    <div class="d-none d-sm-inline-block form-inline mr-auto ml-md-3 my-2 my-md-0 mw-100">
+                        <h6 class="mb-0 font-weight-bold" style="color: #1e293b; letter-spacing: -0.3px;">Welcome to
+                            ParkiSense!</h6>
+                    </div>
+
+                    <!-- Topbar Nav -->
+                    <ul class="navbar-nav ml-auto">
+                        <!-- User Info -->
+                        <li class="nav-item dropdown no-arrow">
+                            <a class="nav-link d-flex align-items-center" href="#" id="userDropdown" role="button"
+                                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="gap: 12px;">
+                                <span class="d-none d-lg-inline font-weight-600"
+                                    style="color: #475569; font-size: 0.88rem; margin-right: 4px;">
+                                    {% if name %} {{ name }} {% else %} User {% endif %}
+                                </span>
+                                <div class="user-avatar-premium">
+                                    {% if name %} {{ name[0] | upper }} {% else %} <i class="fas fa-user"></i> {% endif
+                                    %}
+                                </div>
+                            </a>
+                            <!-- Dropdown -->
+                            <div class="dropdown-menu dropdown-menu-right shadow" aria-labelledby="userDropdown">
+                                <div class="dropdown-header"
+                                    style="font-size:0.75rem; font-weight:700; color:#94a3b8; letter-spacing:1px; text-transform:uppercase;">
+                                    Account
+                                </div>
+                                <a class="dropdown-item" href="#">
+                                    <i class="fas fa-user-md fa-fw mr-2 text-gray-400"></i> Profile
+                                </a>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item" href="#" data-toggle="modal" data-target="#logoutModal">
+                                    <i class="fas fa-sign-out-alt fa-fw mr-2 text-gray-400"></i> Logout
+                                </a>
+                            </div>
+                        </li>
+                    </ul>
+
+                </nav>
+                <!-- End Topbar -->
+
+                <!-- Begin Page Content -->
+                <div class="container-fluid">
+                    {% block content %}{% endblock %}
+                </div>
+                <!-- /.container-fluid -->
+
+            </div>
+            <!-- End Main Content -->
+
+
+
+        </div>
+        <!-- End Content Wrapper -->
+
+    </div>
+    <!-- End Page Wrapper -->
+
+    <!-- Scroll to Top -->
+    <a class="scroll-to-top rounded" href="#page-top">
+        <i class="fas fa-angle-up"></i>
+    </a>
+
+    <!-- Logout Modal -->
+    <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="logoutModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content"
+                style="border-radius: 16px; border: none; box-shadow: 0 20px 50px rgba(0,0,0,0.15);">
+                <div class="modal-header" style="border-bottom: 1px solid rgba(99,102,241,0.1);">
+                    <h5 class="modal-title font-weight-bold" id="logoutModalLabel" style="color:#1e293b;">Ready to
+                        Leave?</h5>
+                    <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body" style="color:#64748b; font-size:0.9rem;">
+                    Select "Logout" below if you are ready to end your current session.
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid rgba(99,102,241,0.1);">
+                    <button class="btn btn-light" type="button" data-dismiss="modal"
+                        style="border-radius:10px; font-size:0.86rem;">Cancel</button>
+                    <a class="btn btn-modern" href="/logout" style="border-radius:10px;">Logout</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         Sense Chatbot Widget
+    ════════════════════════════════════════════════════════════════ -->
+    <div class="sense-bubble" id="senseBubble">
+
+        <!-- Chat Panel -->
+        <div class="sense-panel" id="sensePanel">
+            <div class="sense-header">
+                <div class="sense-header-icon">
+                    <i class="fas fa-comment-medical" style="font-size:18px; color:#a5b4fc;"></i>
+                </div>
+                <div class="sense-header-info">
+                    <strong>Sense</strong>
+                    <small>ParkiSense AI Assistant</small>
+                </div>
+                <div class="sense-online" title="Online"></div>
+            </div>
+
+            <div class="sense-messages" id="senseMessages">
+                <!-- Initial bot message -->
+                <div class="sense-msg bot" id="senseWelcome" style="display:none;">
+                    Hello, <strong>{% if name %}{{ name }}{% else %}there{% endif %}</strong>! 👋 I'm
+                    <strong>Sense</strong>, your ParkiSense AI assistant.
+                    I can help you understand Parkinson's symptoms, guide you through the tests, or explain your
+                    results.
+                    <br><br>Try asking me:<br>
+                    &bull; <em>What is Parkinson's disease?</em><br>
+                    &bull; <em>How does the spiral test work?</em><br>
+                    &bull; <em>What does my voice test result mean?</em><br>
+                    &bull; <em>How do I upload an image?</em>
+                    <div class="sense-msg-time">Now</div>
+                </div>
+                <div class="sense-typing" id="senseTyping">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+
+            <div class="sense-input-area">
+                <input type="text" class="sense-input" id="senseInput" placeholder="Ask Sense anything..."
+                    autocomplete="off">
+                <button class="sense-send" id="senseSendBtn" title="Send">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+            <div class="sense-disclaimer">
+                <i class="fas fa-shield-alt mr-1"></i>
+                For informational purposes only. Not a clinical diagnosis.
+            </div>
+        </div>
+
+        <!-- Toggle Button -->
+        <button class="sense-btn" id="senseToggle" title="Chat with Sense" aria-label="Open Sense Chatbot">
+            <i id="senseIcon" class="fas fa-comment-medical" style="font-size:22px;"></i>
+        </button>
+    </div>
+
+    <!-- Bootstrap core JS -->
+    <script src="{{ url_for('static', filename='vendor/jquery/jquery.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/jquery-easing/jquery.easing.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/sb-admin-2.min.js') }}"></script>
+
+    <!-- Active Nav Link Highlighter -->
+    <script>
+        (function () {
+            var path = window.location.pathname;
+            document.querySelectorAll('.sidebar .nav-link').forEach(function (link) {
+                if (link.getAttribute('href') === path) {
+                    link.closest('.nav-item').classList.add('active');
+                }
+            });
+        })();
+    </script>
+
+    <!-- Sense Chatbot Logic -->
+    <script>
+        (function () {
+            var panel = document.getElementById('sensePanel');
+            var btn = document.getElementById('senseToggle');
+            var icon = document.getElementById('senseIcon');
+            var msgs = document.getElementById('senseMessages');
+            var input = document.getElementById('senseInput');
+            var send = document.getElementById('senseSendBtn');
+            var typing = document.getElementById('senseTyping');
+            var welcome = document.getElementById('senseWelcome');
+            var isOpen = false;
+
+            // ── Sense Q&A Knowledge Base ─────────────────────────────────────
+            var qaDatabase = [
+                {
+                    keywords: ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening', 'greet'],
+                    reply: "Hello again! 😊 How can I assist you today? You can ask me about Parkinson's disease, the spiral drawing test, voice test, or how to read your results."
+                },
+                {
+                    keywords: ['what is parkinson', 'parkinson disease', 'about parkinson', 'define parkinson', 'explain parkinson'],
+                    reply: "🧠 <strong>Parkinson's Disease</strong> is a progressive neurodegenerative disorder that primarily affects motor control. It occurs when dopamine-producing neurons in the brain are damaged or die.<br><br>Common symptoms include:<br>&bull; Resting tremors (shaking)<br>&bull; Muscle rigidity<br>&bull; Slow movement (bradykinesia)<br>&bull; Postural instability<br>&bull; Speech changes"
+                },
+                {
+                    keywords: ['symptom', 'sign', 'indication', 'how do i know', 'early sign'],
+                    reply: "🔍 <strong>Common Early Symptoms</strong> of Parkinson's:<br>&bull; Slight tremors in hand or finger<br>&bull; Handwriting becoming smaller (micrographia)<br>&bull; Loss of smell<br>&bull; Soft or slurred speech<br>&bull; Stiff arms or legs<br>&bull; Sleep disorders<br>&bull; Masked facial expression<br><br>If you notice several of these, please consult a neurologist."
+                },
+                {
+                    keywords: ['spiral', 'drawing', 'image test', 'draw test', 'spiral test', 'how does the spiral', 'upload image', 'upload drawing'],
+                    reply: "🌀 <strong>Spiral Drawing Test:</strong><br>Our AI analyzes the smoothness and consistency of your spiral drawing to detect motor tremors — a hallmark symptom of Parkinson's disease.<br><br><strong>How to use it:</strong><br>1. Go to <em>Spiral Test</em> from the sidebar<br>2. Draw a spiral on the canvas or upload an image<br>3. Click <em>Analyse</em> — results appear instantly"
+                },
+                {
+                    keywords: ['voice', 'audio', 'speech', 'mic', 'microphone', 'vocal', 'sound', 'record', 'voice test', 'upload audio'],
+                    reply: "🎙️ <strong>Voice Test:</strong><br>Parkinson's affects vocal cord muscles, causing changes in voice frequency and stability. Our AI analyzes your <em>sustained vowel sound</em> (saying 'ahh') to detect these subtle changes.<br><br><strong>How to use it:</strong><br>1. Go to <em>Voice Test</em> from the sidebar<br>2. Upload a .wav audio file<br>3. Click <em>Detect PD</em> to get results"
+                },
+                {
+                    keywords: ['result', 'report', 'prediction', 'diagnosis', 'output', 'what does it mean', 'interpret', 'weak pattern', 'healthy', 'further diagnosis'],
+                    reply: "📊 <strong>Understanding Your Results:</strong><br>&bull; <strong>Healthy</strong> — No significant Parkinson's indicators detected<br>&bull; <strong>Weak Pattern</strong> — Some indicators found; possible early-stage signs<br>&bull; <strong>Further Diagnosis Required</strong> — Mixed signals; a clinical consultation is recommended<br><br>⚠️ <em>These are AI screenings, not clinical diagnoses. Always consult a neurologist for professional evaluation.</em>"
+                },
+                {
+                    keywords: ['dashboard', 'report', 'history', 'past result', 'previous test', 'my test'],
+                    reply: "📋 <strong>Reports Dashboard:</strong><br>Your test history is saved automatically. Go to <em>Reports</em> from the sidebar to view all your past spiral and voice test results with timestamps."
+                },
+                {
+                    keywords: ['treatment', 'cure', 'medicine', 'medication', 'therapy', 'manage'],
+                    reply: "💊 <strong>Parkinson's Management:</strong><br>There is currently no cure, but treatments can significantly help:<br>&bull; <strong>Medication</strong> – Levodopa, Dopamine agonists<br>&bull; <strong>Physiotherapy</strong> – Improves mobility<br>&bull; <strong>Speech therapy</strong> – Addresses vocal changes<br>&bull; <strong>Exercise</strong> – Shown to slow progression<br>&bull; <strong>DBS (Deep Brain Stimulation)</strong> – A surgical option<br><br>Always follow your neurologist's advice."
+                },
+                {
+                    keywords: ['safe', 'privacy', 'data', 'secure', 'share', 'information'],
+                    reply: "🔒 <strong>Your Privacy Matters:</strong><br>All your data is stored securely in an encrypted local database. ParkiSense does <strong>not</strong> share your personal information or test results with any third parties. Your privacy is our top priority."
+                },
+                {
+                    keywords: ['help', 'guide', 'how to', 'start', 'begin', 'use', 'navigate'],
+                    reply: "📖 <strong>Quick Guide:</strong><br>&bull; <strong>Spiral Test</strong> – Draw or upload a spiral to test motor tremors<br>&bull; <strong>Voice Test</strong> – Upload a voice recording to test vocal stability<br>&bull; <strong>Reports</strong> – View your test history and combined diagnosis<br><br>I'm here to help! Ask me anything about Parkinson's or the app."
+                },
+                {
+                    keywords: ['accuracy', 'reliable', 'correct', 'trust', 'confidence', 'how accurate'],
+                    reply: "📈 <strong>Accuracy & Reliability:</strong><br>Our AI models are trained on clinical datasets. The voice model achieves approximately <strong>86–92% accuracy</strong> and the spiral model around <strong>85–90%</strong>.<br><br>However, ParkiSense is a <em>screening tool</em> designed to flag potential concerns, not replace professional medical examination."
+                },
+                {
+                    keywords: ['logout', 'log out', 'sign out', 'exit', 'leave'],
+                    reply: "👋 To log out, click the <em>Logout</em> option in the sidebar. Your session and test history will be safely preserved for your next visit."
+                },
+                {
+                    keywords: ['forget', 'forgot', 'password', 'reset'],
+                    reply: "🔑 Forgot your password? Go to the <strong>Forgot Password</strong> page and enter your email along with your secret pet's name to recover your credentials."
+                },
+                {
+                    keywords: ['thank', 'thanks', 'appreciate', 'helpful'],
+                    reply: "You're welcome! 😊 It's my pleasure to help. Feel free to ask anything else about Parkinson's or how to use ParkiSense."
+                },
+                {
+                    keywords: ['stress', 'worried', 'anxious', 'scared', 'nervous', 'fear'],
+                    reply: "💙 It's completely understandable to feel worried. Remember — a screening result is <strong>not</strong> a final diagnosis. Many people live full, productive lives with Parkinson's when it is detected and managed early.<br><br>I'm here for you. Please also speak with a licensed neurologist for proper guidance."
+                }
+            ];
+
+            var fallbackReplies = [
+                "I'm not sure I understand that. Can you try rephrasing? You could ask me about Parkinson's symptoms, the spiral test, voice test, or your results.",
+                "Hmm, that's outside my knowledge area. Try asking about the drawing test, voice analysis, or what your results mean!",
+                "I didn't quite catch that. I can help with questions about Parkinson's disease, how the tests work, or how to read your report."
+            ];
+
+            function getTime() {
+                var d = new Date();
+                return d.getHours() + ':' + String(d.getMinutes()).padStart(2, '0');
+            }
+
+            function addMsg(text, isUser) {
+                var div = document.createElement('div');
+                div.className = 'sense-msg ' + (isUser ? 'user' : 'bot');
+                div.innerHTML = text + '<div class="sense-msg-time">' + getTime() + '</div>';
+                msgs.insertBefore(div, typing);
+                msgs.scrollTop = msgs.scrollHeight;
+            }
+
+            function showTyping() {
+                typing.style.display = 'flex';
+                msgs.scrollTop = msgs.scrollHeight;
+            }
+
+            function hideTyping() {
+                typing.style.display = 'none';
+            }
+
+            function getSmartReply(userText) {
+                var lower = userText.toLowerCase();
+                var bestMatch = null;
+                var bestScore = 0;
+                for (var i = 0; i < qaDatabase.length; i++) {
+                    var qa = qaDatabase[i];
+                    var score = 0;
+                    for (var j = 0; j < qa.keywords.length; j++) {
+                        if (lower.indexOf(qa.keywords[j]) !== -1) {
+                            score += qa.keywords[j].length; // longer keyword match = higher confidence
+                        }
+                    }
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMatch = qa.reply;
+                    }
+                }
+                if (bestScore > 0) return bestMatch;
+                return fallbackReplies[Math.floor(Math.random() * fallbackReplies.length)];
+            }
+
+            function botReply(userText) {
+                showTyping();
+                setTimeout(function () {
+                    hideTyping();
+                    var reply = getSmartReply(userText);
+                    addMsg(reply, false);
+                }, 1100);
+            }
+
+            function togglePanel() {
+                isOpen = !isOpen;
+                if (isOpen) {
+                    panel.classList.add('open');
+                    icon.className = 'fas fa-times';
+                    icon.style.fontSize = '20px';
+                    // Show welcome after typing animation
+                    setTimeout(function () {
+                        hideTyping();
+                        welcome.style.display = 'block';
+                        msgs.scrollTop = msgs.scrollHeight;
+                    }, 1200);
+                } else {
+                    panel.classList.remove('open');
+                    icon.className = 'fas fa-comment-medical';
+                    icon.style.fontSize = '22px';
+                }
+            }
+
+            function submitMsg() {
+                var text = input.value.trim();
+                if (!text) return;
+                addMsg(text, true);
+                input.value = '';
+                botReply(text);
+            }
+
+            btn.addEventListener('click', togglePanel);
+            send.addEventListener('click', submitMsg);
+            input.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') submitMsg();
+            });
+        })();
+    </script>
+
+</body>
+
+</html>

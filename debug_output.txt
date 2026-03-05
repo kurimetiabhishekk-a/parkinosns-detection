@@ -1,0 +1,12 @@
+Executable: C:\Users\Abhishek\Downloads\AE117_ParkinsonDiseaseDetection-20251208T083701Z-3-001\AE117_ParkinsonDiseaseDetection\.venv\Scripts\python.exe
+Cwd: C:\Users\Abhishek\Downloads\AE117_ParkinsonDiseaseDetection-20251208T083701Z-3-001\AE117_ParkinsonDiseaseDetection
+Path:
+  C:\Users\Abhishek\Downloads\AE117_ParkinsonDiseaseDetection-20251208T083701Z-3-001\AE117_ParkinsonDiseaseDetection
+  C:\Users\Abhishek\AppData\Local\Programs\Python\Python310\python310.zip
+  C:\Users\Abhishek\AppData\Local\Programs\Python\Python310\DLLs
+  C:\Users\Abhishek\AppData\Local\Programs\Python\Python310\lib
+  C:\Users\Abhishek\AppData\Local\Programs\Python\Python310
+  C:\Users\Abhishek\Downloads\AE117_ParkinsonDiseaseDetection-20251208T083701Z-3-001\AE117_ParkinsonDiseaseDetection\.venv
+  C:\Users\Abhishek\Downloads\AE117_ParkinsonDiseaseDetection-20251208T083701Z-3-001\AE117_ParkinsonDiseaseDetection\.venv\lib\site-packages
+numpy imported successfully: 2.2.6 C:\Users\Abhishek\Downloads\AE117_ParkinsonDiseaseDetection-20251208T083701Z-3-001\AE117_ParkinsonDiseaseDetection\.venv\lib\site-packages\numpy\__init__.py
+dateutil imported successfully

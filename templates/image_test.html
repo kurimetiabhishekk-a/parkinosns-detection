@@ -1,0 +1,530 @@
+{% extends "layout.html" %}
+{% block content %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+    .results-container {
+        max-width: 1000px;
+        margin: 20px auto;
+        padding: 0 20px;
+    }
+
+    .results-header {
+        text-align: center;
+        margin-bottom: 40px;
+    }
+
+    .results-icon {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+        animation: scaleIn 0.5s ease;
+    }
+
+    .results-icon.positive {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border: 3px solid #f59e0b;
+    }
+
+    .results-icon.negative {
+        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        border: 3px solid #10b981;
+    }
+
+    .results-icon i {
+        font-size: 36px;
+    }
+
+    .results-icon.positive i {
+        color: #f59e0b;
+    }
+
+    .results-icon.negative i {
+        color: #10b981;
+    }
+
+    @keyframes scaleIn {
+        from {
+            transform: scale(0);
+            opacity: 0;
+        }
+
+        to {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    .results-title {
+        font-family: 'Inter', sans-serif;
+        font-size: 28px;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 8px;
+    }
+
+    .results-subtitle {
+        font-family: 'Inter', sans-serif;
+        font-size: 15px;
+        color: #64748b;
+    }
+
+    .results-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        margin-bottom: 32px;
+    }
+
+    @media (max-width: 768px) {
+        .results-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .result-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-radius: 24px;
+        overflow: hidden;
+        box-shadow: var(--shadow-lg);
+        border: 1px solid var(--glass-border);
+        animation: slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        opacity: 0;
+    }
+
+    @keyframes slideUp {
+        from {
+            transform: translateY(20px);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .result-card:nth-child(2) {
+        animation-delay: 0.1s;
+    }
+
+    .card-header {
+        padding: 16px 24px;
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .card-header i {
+        font-size: 20px;
+        color: white;
+    }
+
+    .card-header h3 {
+        font-family: 'Inter', sans-serif;
+        font-size: 16px;
+        font-weight: 600;
+        color: white;
+        margin: 0;
+    }
+
+    .card-body {
+        padding: 24px;
+    }
+
+    .image-preview {
+        width: 100%;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        border: 2px solid #e2e8f0;
+    }
+
+    .prediction-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 20px;
+        border-radius: 12px;
+        font-family: 'Inter', sans-serif;
+        font-size: 16px;
+        font-weight: 700;
+        margin-bottom: 16px;
+    }
+
+    .prediction-badge.parkinson {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        color: #b45309;
+        border: 2px solid #f59e0b;
+    }
+
+    .prediction-badge.healthy {
+        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        color: #047857;
+        border: 2px solid #10b981;
+    }
+
+    .result-text {
+        font-family: 'Inter', sans-serif;
+        font-size: 15px;
+        color: #475569;
+        line-height: 1.7;
+    }
+
+    .suggestion-card .card-header {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+
+    .suggestion-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .suggestion-list li {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 12px 0;
+        border-bottom: 1px solid #f1f5f9;
+        font-family: 'Inter', sans-serif;
+        font-size: 14px;
+        color: #475569;
+        line-height: 1.6;
+    }
+
+    .suggestion-list li:last-child {
+        border-bottom: none;
+    }
+
+    .suggestion-list li i {
+        color: #10b981;
+        margin-top: 3px;
+        flex-shrink: 0;
+    }
+
+    .actions-bar {
+        display: flex;
+        gap: 16px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .action-btn {
+        padding: 14px 28px;
+        border: none;
+        border-radius: 12px;
+        font-family: 'Inter', sans-serif;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+    }
+
+    .action-btn.primary {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        color: white;
+    }
+
+    .action-btn.primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.5);
+    }
+
+    .action-btn.secondary {
+        background: rgba(255, 255, 255, 0.5);
+        backdrop-filter: blur(5px);
+        color: var(--text-main);
+        border: 1px solid var(--glass-border);
+    }
+
+    .action-btn.secondary:hover {
+        background: #e2e8f0;
+    }
+
+    /* Status indicator animation */
+    .status-pulse {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 8px;
+        animation: pulse 2s infinite;
+    }
+
+    .status-pulse.warning {
+        background: #f59e0b;
+    }
+
+    .status-pulse.success {
+        background: #10b981;
+    }
+
+    @keyframes pulse {
+
+        0%,
+        100% {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        50% {
+            opacity: 0.5;
+            transform: scale(1.1);
+        }
+    }
+
+    /* Info box */
+    .info-box {
+        background: #f0f9ff;
+        border: 1px solid #bae6fd;
+        border-radius: 12px;
+        padding: 16px 20px;
+        margin-top: 16px;
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .info-box i {
+        color: #0284c7;
+        margin-top: 2px;
+    }
+
+    .info-box p {
+        font-family: 'Inter', sans-serif;
+        font-size: 13px;
+        color: #0369a1;
+        line-height: 1.6;
+        margin: 0;
+    }
+
+    /* Confidence meter */
+    .confidence-section {
+        margin-top: 20px;
+    }
+
+    .confidence-label {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+    }
+
+    .confidence-label span {
+        font-family: 'Inter', sans-serif;
+        font-size: 13px;
+        color: #64748b;
+    }
+
+    .confidence-bar {
+        height: 8px;
+        background: #e2e8f0;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .confidence-fill {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 1s ease;
+    }
+
+    .confidence-fill.high {
+        background: linear-gradient(90deg, #86efac, #4ade80);
+    }
+
+    .confidence-fill.medium {
+        background: linear-gradient(90deg, #f59e0b, #d97706);
+    }
+
+    .animate-delay-1 {
+        animation-delay: 0.1s;
+    }
+
+    .animate-delay-2 {
+        animation-delay: 0.2s;
+    }
+
+    .animate-delay-3 {
+        animation-delay: 0.3s;
+    }
+</style>
+
+<main class="results-container">
+    <div class="results-header">
+        {% if confidence == '0' %}
+        <div class="results-icon"
+            style="background: linear-gradient(135deg,#fee2e2,#fecaca); border:3px solid #ef4444;">
+            <i class="fas fa-exclamation-circle" style="color:#ef4444;"></i>
+        </div>
+        {% elif 'Parkinson' in result or 'Weak' in result %}
+        <div class="results-icon positive">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        {% else %}
+        <div class="results-icon negative">
+            <i class="fas fa-check-circle"></i>
+        </div>
+        {% endif %}
+        {% if confidence == '0' %}
+        <h1 class="results-title">Invalid Input</h1>
+        <p class="results-subtitle">{{ result }} — Please go back and draw a proper spiral</p>
+        {% else %}
+        <h1 class="results-title">Analysis Complete</h1>
+        <p class="results-subtitle">Your spiral drawing has been analyzed for Parkinson's Disease indicators</p>
+        {% endif %}
+    </div>
+
+    <div class="results-grid">
+        <!-- Prediction Card -->
+        <div class="result-card animate-delay-1">
+            <div class="card-header">
+                <i class="fas fa-brain"></i>
+                <h3>Prediction Result</h3>
+            </div>
+            <div class="card-body">
+                <div class="text-center">
+                    <img class="image-preview" src="/static/img/test.jpg?t={{ timestamp }}" alt="Analyzed Drawing">
+                </div>
+
+                {% if 'Parkinson' in result or 'Weak' in result %}
+                <div class="prediction-badge parkinson">
+                    <span class="status-pulse warning"></span>
+                    <i class="fas fa-exclamation-circle"></i>
+                    Weak Pattern
+                </div>
+                {% elif confidence == '0' %}
+                <div class="prediction-badge"
+                    style="background:linear-gradient(135deg,#fee2e2,#fecaca);color:#b91c1c;border:2px solid #ef4444;">
+                    <i class="fas fa-times-circle"></i>
+                    Invalid Drawing
+                </div>
+                {% else %}
+                <div class="prediction-badge healthy">
+                    <span class="status-pulse success"></span>
+                    <i class="fas fa-check-circle"></i>
+                    Healthy Pattern
+                </div>
+                {% endif %}
+
+                <p class="result-text">{{ result }}</p>
+
+                <div class="confidence-section">
+                    {% if confidence == '0' %}
+                    <div
+                        style="background:#fef2f2; border:1px solid #fecaca; border-radius:12px; padding:14px 18px; display:flex; align-items:center; gap:10px;">
+                        <i class="fas fa-exclamation-circle" style="color:#ef4444;"></i>
+                        <p style="margin:0; font-size:13px; color:#b91c1c; font-family:'Inter',sans-serif;">
+                            {{ suggestion }}
+                        </p>
+                    </div>
+                    {% else %}
+                    <div class="confidence-label">
+                        <span>Confidence Score</span>
+                        <span><strong>{{ confidence }}%</strong></span>
+                    </div>
+                    <div class="confidence-bar">
+                        <div class="confidence-fill high" style="width: {{ confidence }}%;"></div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="info-box">
+                    <i class="fas fa-info-circle"></i>
+                    <p>This is an AI-based screening tool and should not replace professional medical diagnosis. Please
+                        consult a healthcare provider for accurate evaluation.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Suggestion Card -->
+        <div class="result-card suggestion-card animate-delay-2">
+            <div class="card-header">
+                <i class="fas fa-lightbulb"></i>
+                <h3>{% if confidence == '0' %}Instructions{% else %}Recommendations{% endif %}</h3>
+            </div>
+            <div class="card-body">
+                <p class="result-text" style="margin-bottom: 20px;">{{ suggestion }}</p>
+
+                <ul class="suggestion-list">
+                    {% if confidence == '0' %}
+                    <li>
+                        <i class="fas fa-pencil-alt" style="color:#6366f1;"></i>
+                        <span>Draw a <strong>spiral</strong> starting from the centre and spiraling outward</span>
+                    </li>
+                    <li>
+                        <i class="fas fa-hand-paper" style="color:#6366f1;"></i>
+                        <span>Draw naturally — do not trace over a template, just draw freehand</span>
+                    </li>
+                    <li>
+                        <i class="fas fa-expand-arrows-alt" style="color:#6366f1;"></i>
+                        <span>Make the spiral large enough to fill at least a quarter of the canvas</span>
+                    </li>
+                    <li>
+                        <i class="fas fa-redo" style="color:#6366f1;"></i>
+                        <span>Click "Test Another Drawing" below to try again</span>
+                    </li>
+                    {% elif 'Parkinson' in result or 'Weak' in result %}
+                    <li>
+                        <i class="fas fa-check"></i>
+                        <span>Schedule an appointment with a neurologist for comprehensive evaluation</span>
+                    </li>
+                    <li>
+                        <i class="fas fa-check"></i>
+                        <span>Complete the voice analysis test for more accurate results</span>
+                    </li>
+                    <li>
+                        <i class="fas fa-check"></i>
+                        <span>Keep track of any motor symptoms like tremors or stiffness</span>
+                    </li>
+                    <li>
+                        <i class="fas fa-check"></i>
+                        <span>Maintain an active lifestyle with regular exercise</span>
+                    </li>
+                    {% else %}
+                    <li>
+                        <i class="fas fa-check"></i>
+                        <span>Continue with regular health check-ups</span>
+                    </li>
+                    <li>
+                        <i class="fas fa-check"></i>
+                        <span>Maintain a healthy diet rich in antioxidants</span>
+                    </li>
+                    <li>
+                        <i class="fas fa-check"></i>
+                        <span>Stay physically active with regular exercise</span>
+                    </li>
+                    <li>
+                        <i class="fas fa-check"></i>
+                        <span>Monitor for any changes in motor functions</span>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="actions-bar">
+        <a href="image" class="action-btn primary">
+            <i class="fas fa-redo"></i> Test Another Drawing
+        </a>
+        <a href="upload" class="action-btn secondary">
+            <i class="fas fa-microphone"></i> Test Voice
+        </a>
+        <a href="record" class="action-btn secondary">
+            <i class="fas fa-chart-bar"></i> View Final Prediction
+        </a>
+    </div>
+</main>
+
+{% endblock %}

@@ -1,0 +1,987 @@
+{% extends "layout.html" %}
+{% block content %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+	* {
+		box-sizing: border-box;
+	}
+
+	/* ═══════════════════════════════════════════════
+   PAGE BASE
+═══════════════════════════════════════════════ */
+	.drawing-page {
+		font-family: 'Inter', sans-serif;
+		padding: 32px 24px;
+		max-width: 1060px;
+		margin: 0 auto;
+	}
+
+	/* ═══════════════════════════════════════════════
+   HEADER
+═══════════════════════════════════════════════ */
+	.drawing-hero {
+		text-align: center;
+		margin-bottom: 36px;
+	}
+
+	.drawing-hero-badge {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		background: rgba(99, 102, 241, 0.12);
+		border: 1px solid rgba(99, 102, 241, 0.28);
+		color: #818cf8;
+		font-size: 12px;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		padding: 6px 16px;
+		border-radius: 50px;
+		margin-bottom: 16px;
+	}
+
+	.drawing-hero h1 {
+		font-size: 32px;
+		font-weight: 800;
+		color: #1e293b;
+		margin-bottom: 10px;
+		letter-spacing: -0.5px;
+	}
+
+	.drawing-hero p {
+		font-size: 15px;
+		color: #64748b;
+	}
+
+	/* ═══════════════════════════════════════════════
+   TABS
+═══════════════════════════════════════════════ */
+	.mode-tabs {
+		display: flex;
+		background: #f1f5f9;
+		border-radius: 14px;
+		padding: 5px;
+		margin-bottom: 32px;
+		max-width: 420px;
+		margin-left: auto;
+		margin-right: auto;
+	}
+
+	.mode-tab {
+		flex: 1;
+		padding: 11px 20px;
+		border: none;
+		background: transparent;
+		border-radius: 10px;
+		font-family: 'Inter', sans-serif;
+		font-size: 14px;
+		font-weight: 600;
+		color: #64748b;
+		cursor: pointer;
+		transition: all 0.25s ease;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 8px;
+	}
+
+	.mode-tab.active {
+		background: white;
+		color: #6366f1;
+		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+	}
+
+	.tab-content {
+		display: none;
+	}
+
+	.tab-content.active {
+		display: block;
+		animation: fadeUp 0.3s ease;
+	}
+
+	@keyframes fadeUp {
+		from {
+			opacity: 0;
+			transform: translateY(12px);
+		}
+
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	/* ═══════════════════════════════════════════════
+   CANVAS SECTION
+═══════════════════════════════════════════════ */
+	.canvas-section {
+		background: white;
+		border-radius: 24px;
+		border: 1px solid #e2e8f0;
+		box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+		overflow: hidden;
+	}
+
+	.canvas-topbar {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 18px 24px;
+		border-bottom: 1px solid #f1f5f9;
+		flex-wrap: wrap;
+		gap: 12px;
+	}
+
+	.canvas-topbar-title {
+		font-size: 15px;
+		font-weight: 700;
+		color: #1e293b;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.canvas-topbar-title .dot {
+		width: 10px;
+		height: 10px;
+		background: linear-gradient(135deg, #6366f1, #8b5cf6);
+		border-radius: 50%;
+	}
+
+	.toolbar {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.tb-btn {
+		width: 38px;
+		height: 38px;
+		border: 1.5px solid #e2e8f0;
+		background: white;
+		border-radius: 10px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		transition: all 0.2s;
+		font-size: 14px;
+		color: #64748b;
+	}
+
+	.tb-btn:hover {
+		border-color: #6366f1;
+		background: #f5f3ff;
+		color: #6366f1;
+	}
+
+	.tb-btn.active {
+		background: #6366f1;
+		border-color: #6366f1;
+		color: white;
+	}
+
+	.size-ctrl {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		padding: 6px 12px;
+		background: #f8fafc;
+		border: 1.5px solid #e2e8f0;
+		border-radius: 10px;
+	}
+
+	.size-ctrl span {
+		font-size: 11px;
+		font-weight: 600;
+		color: #94a3b8;
+		white-space: nowrap;
+	}
+
+	.size-ctrl input[type="range"] {
+		width: 64px;
+		accent-color: #6366f1;
+	}
+
+	/* Canvas area with spiral guide */
+	.canvas-body {
+		position: relative;
+		background: #f8fafc;
+		padding: 16px;
+	}
+
+	.spiral-guide-svg {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		pointer-events: none;
+		transition: opacity 0.5s ease;
+		z-index: 1;
+	}
+
+	.spiral-guide-svg.hidden {
+		opacity: 0 !important;
+	}
+
+	#drawingCanvas {
+		display: block;
+		width: 100%;
+		height: 420px;
+		background: white;
+		border-radius: 14px;
+		cursor: crosshair;
+		border: 1.5px solid #e2e8f0;
+		position: relative;
+		z-index: 2;
+	}
+
+	.guide-label {
+		position: absolute;
+		bottom: 28px;
+		left: 50%;
+		transform: translateX(-50%);
+		z-index: 3;
+		background: rgba(255, 255, 255, 0.9);
+		border: 1px solid #e2e8f0;
+		padding: 5px 16px;
+		border-radius: 50px;
+		font-size: 12px;
+		color: #94a3b8;
+		font-weight: 500;
+		pointer-events: none;
+		white-space: nowrap;
+		transition: opacity 0.5s;
+	}
+
+	.guide-label.hidden {
+		opacity: 0;
+	}
+
+	/* Canvas actions */
+	.canvas-actions {
+		display: flex;
+		gap: 10px;
+		padding: 16px 24px;
+		background: white;
+		border-top: 1px solid #f1f5f9;
+		flex-wrap: wrap;
+	}
+
+	.ca-btn {
+		padding: 11px 20px;
+		border: none;
+		border-radius: 10px;
+		font-family: 'Inter', sans-serif;
+		font-size: 13px;
+		font-weight: 600;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		gap: 7px;
+		transition: all 0.2s;
+	}
+
+	.ca-btn.ghost {
+		background: #f1f5f9;
+		color: #475569;
+	}
+
+	.ca-btn.ghost:hover {
+		background: #e2e8f0;
+	}
+
+	.ca-btn.red {
+		background: #fef2f2;
+		color: #dc2626;
+	}
+
+	.ca-btn.red:hover {
+		background: #fee2e2;
+	}
+
+	.ca-btn.primary {
+		flex: 1;
+		justify-content: center;
+		background: linear-gradient(135deg, #6366f1, #8b5cf6);
+		color: white;
+		font-size: 14px;
+		box-shadow: 0 6px 18px rgba(99, 102, 241, 0.35);
+	}
+
+	.ca-btn.primary:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 10px 24px rgba(99, 102, 241, 0.45);
+	}
+
+	/* ═══════════════════════════════════════════════
+   UPLOAD TAB
+═══════════════════════════════════════════════ */
+	.upload-shell {
+		max-width: 580px;
+		margin: 0 auto;
+	}
+
+	/* Upload hero icon */
+	.upload-hero-icon {
+		text-align: center;
+		margin-bottom: 28px;
+	}
+
+	.uhi-ring {
+		position: relative;
+		width: 100px;
+		height: 100px;
+		margin: 0 auto 18px;
+	}
+
+	.uhi-ring::before,
+	.uhi-ring::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		border-radius: 50%;
+		border: 1.5px solid rgba(99, 102, 241, 0.25);
+		animation: pulse-ring 2.5s ease-out infinite;
+	}
+
+	.uhi-ring::after {
+		animation-delay: 1.25s;
+	}
+
+	@keyframes pulse-ring {
+		0% {
+			transform: scale(0.8);
+			opacity: 0.8;
+		}
+
+		100% {
+			transform: scale(1.6);
+			opacity: 0;
+		}
+	}
+
+	.uhi-center {
+		position: absolute;
+		inset: 12px;
+		background: linear-gradient(135deg, #6366f1, #8b5cf6);
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
+		animation: floatBob 3.5s ease-in-out infinite;
+	}
+
+	@keyframes floatBob {
+
+		0%,
+		100% {
+			transform: translateY(0);
+		}
+
+		50% {
+			transform: translateY(-8px);
+		}
+	}
+
+	.uhi-center svg {
+		width: 36px;
+		height: 36px;
+	}
+
+	.upload-hero-icon h2 {
+		font-size: 22px;
+		font-weight: 800;
+		color: #1e293b;
+		margin-bottom: 6px;
+	}
+
+	.upload-hero-icon p {
+		font-size: 14px;
+		color: #64748b;
+	}
+
+	/* Drop zone */
+	.dropzone-area {
+		border: 2px dashed #c7d2fe;
+		border-radius: 20px;
+		padding: 48px 32px;
+		text-align: center;
+		background: linear-gradient(135deg, rgba(99, 102, 241, 0.03) 0%, rgba(139, 92, 246, 0.03) 100%);
+		cursor: pointer;
+		transition: all 0.3s ease;
+		position: relative;
+		margin-bottom: 20px;
+		overflow: hidden;
+	}
+
+	.dropzone-area:hover,
+	.dropzone-area.over {
+		border-color: #6366f1;
+		background: linear-gradient(135deg, rgba(99, 102, 241, 0.07) 0%, rgba(139, 92, 246, 0.07) 100%);
+		transform: scale(1.01);
+	}
+
+	.dropzone-area input[type="file"] {
+		position: absolute;
+		inset: 0;
+		opacity: 0;
+		cursor: pointer;
+	}
+
+	.dz-spiral-icon {
+		width: 72px;
+		height: 72px;
+		background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.15));
+		border-radius: 20px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		margin: 0 auto 18px;
+		border: 1.5px solid rgba(99, 102, 241, 0.2);
+	}
+
+	.dz-spiral-icon svg {
+		width: 40px;
+		height: 40px;
+	}
+
+	.dz-main-text {
+		font-size: 16px;
+		font-weight: 700;
+		color: #1e293b;
+		margin-bottom: 6px;
+	}
+
+	.dz-sub-text {
+		font-size: 13px;
+		color: #64748b;
+		margin-bottom: 14px;
+	}
+
+	.dz-browse-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 7px;
+		padding: 9px 22px;
+		background: linear-gradient(135deg, #6366f1, #8b5cf6);
+		color: white;
+		border-radius: 50px;
+		font-size: 13px;
+		font-weight: 700;
+		box-shadow: 0 6px 16px rgba(99, 102, 241, 0.35);
+		pointer-events: none;
+	}
+
+	.dz-formats {
+		display: flex;
+		justify-content: center;
+		gap: 8px;
+		margin-top: 16px;
+	}
+
+	.fmt-chip {
+		font-size: 11px;
+		font-weight: 700;
+		color: #6366f1;
+		background: rgba(99, 102, 241, 0.1);
+		border: 1px solid rgba(99, 102, 241, 0.2);
+		padding: 3px 10px;
+		border-radius: 50px;
+	}
+
+	/* Preview */
+	.image-preview-card {
+		display: none;
+		background: #f8fafc;
+		border: 1.5px solid #e2e8f0;
+		border-radius: 16px;
+		padding: 14px 16px;
+		align-items: center;
+		gap: 14px;
+		margin-bottom: 16px;
+	}
+
+	.image-preview-card.show {
+		display: flex;
+	}
+
+	.preview-thumb {
+		width: 56px;
+		height: 56px;
+		border-radius: 10px;
+		object-fit: cover;
+		border: 1px solid #e2e8f0;
+	}
+
+	.preview-info {
+		flex: 1;
+	}
+
+	.preview-fname {
+		font-size: 14px;
+		font-weight: 700;
+		color: #1e293b;
+		margin-bottom: 2px;
+	}
+
+	.preview-fsize {
+		font-size: 12px;
+		color: #64748b;
+	}
+
+	.preview-del {
+		width: 32px;
+		height: 32px;
+		border: none;
+		background: #fef2f2;
+		color: #dc2626;
+		border-radius: 8px;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 13px;
+	}
+
+	.preview-del:hover {
+		background: #fee2e2;
+	}
+
+	.progress-strip {
+		display: none;
+		height: 6px;
+		background: #f1f5f9;
+		border-radius: 10px;
+		overflow: hidden;
+		margin-bottom: 14px;
+	}
+
+	.progress-strip.show {
+		display: block;
+	}
+
+	.progress-strip-fill {
+		height: 100%;
+		background: linear-gradient(90deg, #6366f1, #8b5cf6);
+		border-radius: 10px;
+		width: 0;
+	}
+
+	.progress-strip.loading .progress-strip-fill {
+		animation: stripLoad 1.4s ease forwards;
+	}
+
+	@keyframes stripLoad {
+		0% {
+			width: 0%;
+		}
+
+		100% {
+			width: 90%;
+		}
+	}
+
+	.err-msg {
+		font-size: 13px;
+		color: #dc2626;
+		background: #fef2f2;
+		border: 1px solid #fecaca;
+		border-radius: 10px;
+		padding: 10px 14px;
+		margin-bottom: 14px;
+		display: none;
+	}
+
+	.err-msg.show {
+		display: block;
+	}
+
+	.analyze-btn {
+		width: 100%;
+		padding: 16px;
+		background: linear-gradient(135deg, #6366f1, #8b5cf6);
+		color: white;
+		border: none;
+		border-radius: 14px;
+		font-family: 'Inter', sans-serif;
+		font-size: 15px;
+		font-weight: 700;
+		display: none;
+		align-items: center;
+		justify-content: center;
+		gap: 10px;
+		cursor: pointer;
+		transition: all 0.3s;
+		box-shadow: 0 8px 22px rgba(99, 102, 241, 0.35);
+	}
+
+	.analyze-btn.show {
+		display: flex;
+	}
+
+	.analyze-btn:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 12px 28px rgba(99, 102, 241, 0.45);
+	}
+</style>
+
+<div class="drawing-page">
+
+	<!-- Hero Header -->
+	<div class="drawing-hero">
+		<div class="drawing-hero-badge">
+			<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+				<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z" />
+			</svg>
+			Drawing Analysis
+		</div>
+		<h1>Spiral Pattern Detection</h1>
+		<p>Draw a spiral below or upload an existing image to screen for motor pattern irregularities</p>
+	</div>
+
+	<!-- Tabs -->
+	<div class="mode-tabs">
+		<button class="mode-tab active" data-tab="draw">
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+				stroke-linecap="round" stroke-linejoin="round">
+				<path d="M12 20h9" />
+				<path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+			</svg>
+			Draw Spiral
+		</button>
+		<button class="mode-tab" data-tab="upload">
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+				stroke-linecap="round" stroke-linejoin="round">
+				<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+				<polyline points="17 8 12 3 7 8" />
+				<line x1="12" y1="3" x2="12" y2="15" />
+			</svg>
+			Upload Image
+		</button>
+	</div>
+
+	<!-- ─── Draw Tab ─────────────────────────────────────── -->
+	<div class="tab-content active" id="draw-tab">
+		<div class="canvas-section">
+
+			<!-- Top toolbar -->
+			<div class="canvas-topbar">
+				<div class="canvas-topbar-title">
+					<div class="dot"></div>
+					Drawing Canvas
+					<span style="font-size:12px;font-weight:500;color:#94a3b8;">— Follow the spiral guide</span>
+				</div>
+				<div class="toolbar">
+					<button type="button" class="tb-btn active" id="penTool" title="Pen">
+						<i class="fas fa-pen"></i>
+					</button>
+					<button type="button" class="tb-btn" id="eraserTool" title="Eraser">
+						<i class="fas fa-eraser"></i>
+					</button>
+					<div class="size-ctrl">
+						<span>Size</span>
+						<input type="range" id="brushSize" min="1" max="20" value="3">
+					</div>
+				</div>
+			</div>
+
+			<!-- Canvas Body -->
+			<div class="canvas-body">
+				<!-- Spiral guide overlay -->
+				<svg class="spiral-guide-svg" id="spiralGuide" width="340" height="340" viewBox="0 0 340 340"
+					style="opacity:0.18;" xmlns="http://www.w3.org/2000/svg">
+					<!-- Archimedean spiral approximated with concentric circles -->
+					<circle cx="170" cy="170" r="12" fill="none" stroke="#6366f1" stroke-width="1.5"
+						stroke-dasharray="8 5" />
+					<circle cx="170" cy="170" r="28" fill="none" stroke="#6366f1" stroke-width="1.5"
+						stroke-dasharray="8 5" />
+					<circle cx="170" cy="170" r="48" fill="none" stroke="#6366f1" stroke-width="1.5"
+						stroke-dasharray="8 5" />
+					<circle cx="170" cy="170" r="70" fill="none" stroke="#6366f1" stroke-width="1.5"
+						stroke-dasharray="8 5" />
+					<circle cx="170" cy="170" r="94" fill="none" stroke="#6366f1" stroke-width="1.4"
+						stroke-dasharray="8 5" />
+					<circle cx="170" cy="170" r="120" fill="none" stroke="#6366f1" stroke-width="1.3"
+						stroke-dasharray="8 5" />
+					<circle cx="170" cy="170" r="148" fill="none" stroke="#6366f1" stroke-width="1.2"
+						stroke-dasharray="8 5" />
+					<circle cx="170" cy="170" r="4" fill="#6366f1" opacity="0.6" />
+					<!-- Arrow hinting direction -->
+					<text x="170" y="316" text-anchor="middle" font-size="11" fill="#6366f1"
+						font-family="Inter,sans-serif" font-weight="600" opacity="0.7">draw spiral from centre
+						outward</text>
+				</svg>
+
+				<canvas id="drawingCanvas"></canvas>
+
+				<div class="guide-label" id="guideLabel">
+					<i class="fas fa-hand-pointer" style="margin-right:5px;"></i> Start drawing here
+				</div>
+			</div>
+
+			<!-- Action bar -->
+			<form action="{{ url_for('image') }}" method="post" id="drawingForm">
+				<input type="hidden" name="drawing_data" id="drawingData">
+				<div class="canvas-actions">
+					<button type="button" class="ca-btn ghost" id="undoBtn">
+						<i class="fas fa-undo"></i> Undo
+					</button>
+					<button type="button" class="ca-btn red" id="clearBtn">
+						<i class="fas fa-trash-alt"></i> Clear
+					</button>
+					<button type="button" class="ca-btn ghost" id="downloadBtn">
+						<i class="fas fa-download"></i> Save
+					</button>
+					<button type="submit" class="ca-btn primary">
+						<i class="fas fa-brain"></i> Analyse Drawing
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
+
+	<!-- ─── Upload Tab ───────────────────────────────────── -->
+	<div class="tab-content" id="upload-tab">
+		<div class="upload-shell">
+
+			<!-- Icon + Title -->
+			<div class="upload-hero-icon">
+				<div class="uhi-ring">
+					<div class="uhi-center">
+						<!-- Spiral upload icon -->
+						<svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+							<circle cx="18" cy="18" r="4" stroke="white" stroke-width="2" fill="none" />
+							<circle cx="18" cy="18" r="9" stroke="white" stroke-width="1.8" fill="none"
+								stroke-dasharray="4 3" />
+							<circle cx="18" cy="18" r="14" stroke="white" stroke-width="1.5" fill="none"
+								stroke-dasharray="4 3" />
+							<polyline points="15,8 18,5 21,8" stroke="white" stroke-width="2" stroke-linecap="round"
+								stroke-linejoin="round" />
+						</svg>
+					</div>
+				</div>
+				<h2>Upload Spiral Image</h2>
+				<p>JPG, PNG or GIF — max 10 MB</p>
+			</div>
+
+			<!-- Drop zone -->
+			<form action="{{ url_for('image') }}" method="post" enctype="multipart/form-data" id="uploadForm">
+				<div class="dropzone-area" id="uploadZone">
+					<input type="file" id="upload_file" name="doc" accept="image/*">
+
+					<div class="dz-spiral-icon">
+						<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+							<circle cx="20" cy="20" r="3" stroke="#6366f1" stroke-width="2.5" fill="none" />
+							<circle cx="20" cy="20" r="8" stroke="#8b5cf6" stroke-width="2" fill="none" />
+							<circle cx="20" cy="20" r="14" stroke="#a78bfa" stroke-width="1.5" fill="none" />
+							<circle cx="20" cy="20" r="19" stroke="#c4b5fd" stroke-width="1" fill="none"
+								stroke-dasharray="5 3" />
+						</svg>
+					</div>
+
+					<p class="dz-main-text">Drag &amp; drop your image here</p>
+					<p class="dz-sub-text">or click the button below to browse your files</p>
+					<div class="dz-browse-btn">
+						<i class="fas fa-folder-open"></i> Browse Files
+					</div>
+
+					<div class="dz-formats">
+						<span class="fmt-chip">JPG</span>
+						<span class="fmt-chip">PNG</span>
+						<span class="fmt-chip">GIF</span>
+					</div>
+				</div>
+
+				<div class="progress-strip" id="progressBar">
+					<div class="progress-strip-fill"></div>
+				</div>
+
+				<div class="err-msg" id="errorMessage"></div>
+
+				<div class="image-preview-card" id="previewContainer">
+					<img class="preview-thumb" id="previewImage" src="" alt="Preview">
+					<div class="preview-info">
+						<p class="preview-fname" id="previewName">image.jpg</p>
+						<p class="preview-fsize" id="previewSize">0 KB</p>
+					</div>
+					<button type="button" class="preview-del" id="removeBtn">
+						<i class="fas fa-times"></i>
+					</button>
+				</div>
+
+				<button type="submit" class="analyze-btn" id="predictBtn">
+					<i class="fas fa-brain"></i> Analyse Drawing
+				</button>
+			</form>
+		</div>
+	</div>
+
+</div><!-- /.drawing-page -->
+
+<script>
+	/* ─── Tabs ───────────────────────────────────────────── */
+	document.querySelectorAll('.mode-tab').forEach(btn => {
+		btn.addEventListener('click', function () {
+			document.querySelectorAll('.mode-tab').forEach(b => b.classList.remove('active'));
+			document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+			this.classList.add('active');
+			document.getElementById(this.dataset.tab + '-tab').classList.add('active');
+		});
+	});
+
+	/* ─── Canvas ─────────────────────────────────────────── */
+	const canvas = document.getElementById('drawingCanvas');
+	const ctx = canvas.getContext('2d');
+	const guide = document.getElementById('spiralGuide');
+	const guideLabel = document.getElementById('guideLabel');
+	let isDrawing = false, lastX = 0, lastY = 0;
+	let currentTool = 'pen', brushSize = 3;
+	let history = [], hasDrawn = false;
+
+	function resizeCanvas() {
+		const rect = canvas.parentElement.getBoundingClientRect();
+		const saved = hasDrawn ? canvas.toDataURL() : null;
+		canvas.width = Math.floor(rect.width) - 32;
+		canvas.height = 420;
+		ctx.fillStyle = 'white';
+		ctx.fillRect(0, 0, canvas.width, canvas.height);
+		ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+		if (saved) { const img = new Image(); img.onload = () => ctx.drawImage(img, 0, 0); img.src = saved; }
+	}
+	window.addEventListener('resize', resizeCanvas);
+	resizeCanvas();
+
+	function saveState() {
+		history.push(canvas.toDataURL());
+		if (history.length > 30) history.shift();
+	}
+	function getPos(e) {
+		const r = canvas.getBoundingClientRect();
+		const sx = canvas.width / r.width, sy = canvas.height / r.height;
+		if (e.touches) return { x: (e.touches[0].clientX - r.left) * sx, y: (e.touches[0].clientY - r.top) * sy };
+		return { x: (e.clientX - r.left) * sx, y: (e.clientY - r.top) * sy };
+	}
+	function startDraw(e) {
+		e.preventDefault(); isDrawing = true; saveState();
+		const p = getPos(e); lastX = p.x; lastY = p.y;
+		if (!hasDrawn) {
+			hasDrawn = true;
+			guide.classList.add('hidden');
+			guideLabel.classList.add('hidden');
+		}
+	}
+	function draw(e) {
+		if (!isDrawing) return; e.preventDefault();
+		const p = getPos(e);
+		ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(p.x, p.y);
+		ctx.strokeStyle = currentTool === 'eraser' ? 'white' : '#1e293b';
+		ctx.lineWidth = currentTool === 'eraser' ? brushSize * 3 : brushSize;
+		ctx.stroke();
+		lastX = p.x; lastY = p.y;
+	}
+	function stopDraw() { isDrawing = false; }
+
+	canvas.addEventListener('mousedown', startDraw);
+	canvas.addEventListener('mousemove', draw);
+	canvas.addEventListener('mouseup', stopDraw);
+	canvas.addEventListener('mouseout', stopDraw);
+	canvas.addEventListener('touchstart', startDraw);
+	canvas.addEventListener('touchmove', draw);
+	canvas.addEventListener('touchend', stopDraw);
+
+	document.getElementById('penTool').addEventListener('click', function () {
+		currentTool = 'pen';
+		document.querySelectorAll('.tb-btn').forEach(b => b.classList.remove('active'));
+		this.classList.add('active');
+	});
+	document.getElementById('eraserTool').addEventListener('click', function () {
+		currentTool = 'eraser';
+		document.querySelectorAll('.tb-btn').forEach(b => b.classList.remove('active'));
+		this.classList.add('active');
+	});
+	document.getElementById('brushSize').addEventListener('input', function () {
+		brushSize = parseInt(this.value);
+	});
+	document.getElementById('clearBtn').addEventListener('click', function () {
+		saveState();
+		ctx.fillStyle = 'white'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+		hasDrawn = false;
+		guide.classList.remove('hidden');
+		guideLabel.classList.remove('hidden');
+	});
+	document.getElementById('undoBtn').addEventListener('click', function () {
+		if (history.length > 0) {
+			const img = new Image();
+			img.onload = () => { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(img, 0, 0); };
+			img.src = history.pop();
+		}
+	});
+	document.getElementById('downloadBtn').addEventListener('click', function () {
+		const a = document.createElement('a');
+		a.download = 'spiral_drawing.png';
+		a.href = canvas.toDataURL('image/png');
+		a.click();
+	});
+	document.getElementById('drawingForm').addEventListener('submit', function () {
+		document.getElementById('drawingData').value = canvas.toDataURL('image/png');
+	});
+
+	/* ─── Upload ─────────────────────────────────────────── */
+	const uploadFile = document.getElementById('upload_file');
+	const uploadZone = document.getElementById('uploadZone');
+	const progressBar = document.getElementById('progressBar');
+	const errMsg = document.getElementById('errorMessage');
+	const previewContainer = document.getElementById('previewContainer');
+	const previewImage = document.getElementById('previewImage');
+	const previewName = document.getElementById('previewName');
+	const previewSize = document.getElementById('previewSize');
+	const removeBtn = document.getElementById('removeBtn');
+	const predictBtn = document.getElementById('predictBtn');
+
+	uploadFile.addEventListener('change', () => { if (uploadFile.files[0]) handleFile(uploadFile.files[0]); });
+	uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('over'); });
+	uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('over'));
+	uploadZone.addEventListener('drop', e => {
+		e.preventDefault(); uploadZone.classList.remove('over');
+		if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+	});
+
+	function handleFile(file) {
+		const ext = file.name.split('.').pop().toLowerCase();
+		if (!['jpg', 'jpeg', 'png', 'gif'].includes(ext)) {
+			errMsg.textContent = 'Please upload a valid image (JPG, PNG or GIF)';
+			errMsg.classList.add('show'); return;
+		}
+		errMsg.classList.remove('show');
+		uploadZone.style.display = 'none';
+		progressBar.classList.add('show', 'loading');
+		setTimeout(() => {
+			progressBar.classList.remove('show', 'loading');
+			const reader = new FileReader();
+			reader.onload = e2 => { previewImage.src = e2.target.result; };
+			reader.readAsDataURL(file);
+			previewName.textContent = file.name;
+			previewSize.textContent = fmtSize(file.size);
+			previewContainer.classList.add('show');
+			predictBtn.classList.add('show');
+		}, 1200);
+	}
+	removeBtn.addEventListener('click', () => {
+		previewContainer.classList.remove('show');
+		predictBtn.classList.remove('show');
+		uploadZone.style.display = '';
+		uploadFile.value = '';
+	});
+	function fmtSize(b) {
+		if (!b) return '0 Bytes';
+		const k = 1024, sz = ['Bytes', 'KB', 'MB', 'GB'];
+		const i = Math.floor(Math.log(b) / Math.log(k));
+		return parseFloat((b / Math.pow(k, i)).toFixed(2)) + ' ' + sz[i];
+	}
+</script>
+
+{% endblock %}

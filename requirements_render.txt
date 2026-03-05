@@ -1,0 +1,22 @@
+# Core Web App
+Flask==2.2.5
+Werkzeug==2.2.3
+gunicorn
+
+# Data & ML
+pandas
+numpy
+scikit-learn
+joblib
+
+# Image Processing
+Pillow
+opencv-python-headless
+
+# Audio / Voice Analysis
+praat-parselmouth
+librosa
+
+# Utilities
+python-dateutil
+requests

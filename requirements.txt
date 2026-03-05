@@ -1,0 +1,28 @@
+# ─── Core Web App ──────────────────────────────────────────────
+Flask==2.2.5
+Werkzeug==2.2.3
+gunicorn
+
+# ─── Data & ML ─────────────────────────────────────────────────
+pandas
+numpy
+scikit-learn
+joblib
+
+# ─── Image Processing ──────────────────────────────────────────
+Pillow
+opencv-python-headless
+
+# ─── Deep Learning (Drawing CNN) ───────────────────────────────
+tensorflow-cpu
+
+# ─── Audio / Voice Analysis ────────────────────────────────────
+praat-parselmouth
+librosa
+
+# ─── Dataset Download ──────────────────────────────────────────
+kaggle
+
+# ─── Utilities ─────────────────────────────────────────────────
+python-dateutil
+requests

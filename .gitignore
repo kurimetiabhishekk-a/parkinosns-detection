@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+upload/test.wav
+static/img/test.jpg
+mydatabase.db
+parkisense_deploy.zip
+.zip
+spiral_data/
+DataSet/
+archive_extracted/
+node_modules/
+.env

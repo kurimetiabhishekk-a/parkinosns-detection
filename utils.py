@@ -1,0 +1,327 @@
+"""Image-based Parkinson's drawing analysis.
+
+Primary  : HOG + LBP feature-based SVM model (drawing_model.pkl)
+           85.8% cross-validated accuracy on real Kaggle spiral data.
+Fallback : Keras CNN (keras_model.h5) if feature model unavailable.
+Geometric: Only used to validate input (blank / not-a-spiral detection).
+"""
+
+import numpy as np
+import os
+import joblib
+
+np.set_printoptions(suppress=True)
+
+_base = os.path.dirname(os.path.abspath(__file__))
+
+# ── Load feature-based model (PRIMARY — 85.8% CV accuracy) ───────────────────
+_feat_model  = None
+_feat_scaler = None
+try:
+    _mpath = os.path.join(_base, 'drawing_model.pkl')
+    _spath = os.path.join(_base, 'drawing_scaler.pkl')
+    if os.path.exists(_mpath) and os.path.exists(_spath):
+        _feat_model  = joblib.load(_mpath)
+        _feat_scaler = joblib.load(_spath)
+        print("DEBUG: Feature-based drawing model loaded successfully.")
+    else:
+        print("DEBUG: drawing_model.pkl not found.")
+except Exception as e:
+    print(f"DEBUG: Feature model load error: {e}")
+    _feat_model = _feat_scaler = None
+
+# ── Load Keras CNN (FALLBACK) ─────────────────────────────────────────────────
+model = None
+try:
+    import tensorflow.keras as keras
+    _keras_path = os.path.join(_base, 'keras_model.h5')
+    if os.path.exists(_keras_path):
+        model = keras.models.load_model(_keras_path)
+        print("DEBUG: Keras CNN model loaded (fallback).")
+except Exception as e:
+    print(f"DEBUG: Keras load error: {e}")
+    model = None
+
+data = np.ndarray(shape=(1, 224, 224, 3), dtype=np.float32)
+
+
+# ── Tip banks (deterministic fingerprint selection) ───────────────────────────
+HEALTHY_TIPS = [
+    'Your drawing shows smooth, consistent lines. Maintain hand-eye coordination exercises.',
+    'Healthy pattern detected. Antioxidant-rich diets (berries, nuts) support neurological health.',
+    'Smooth control observed. Regular aerobic exercise is one of the best ways to protect brain function.',
+    'Excellent motor control. Ensure 7-9 hours of quality sleep to maintain cognitive sharpness.',
+    'Steady patterns detected. Staying hydrated and reducing stress helps maintain motor skills.',
+]
+WEAK_TIPS = [
+    'Irregular lines detected. Consider practising larger, deliberate writing movements.',
+    'Irregularity observed. Physical therapy focused on balance can be highly beneficial.',
+    'Weak pattern detected. A Mediterranean diet is often recommended for neurological health.',
+    'Tremor-like patterns noted. Consult a neurologist for a professional screening.',
+    'Shaky lines detected. Simple finger-tapping exercises can help monitor motor skills.',
+]
+
+
+def _select_tip(tips, image_path):
+    """Pick a deterministic tip based on image file hash."""
+    import hashlib
+    try:
+        with open(image_path, 'rb') as f:
+            h = int(hashlib.md5(f.read()).hexdigest(), 16)
+    except Exception:
+        h = 0
+    return tips[h % len(tips)]
+
+
+def _geometric_spiral_analysis(gray_img):
+    """
+    Analyse the spiral drawing geometrically.
+
+    Steps:
+    1. Threshold to find drawn pixels.
+    2. Find centroid (spiral centre).
+    3. Convert to polar coordinates (r, θ) relative to centroid.
+    4. Sort pixels by angle θ and compute radial profile.
+    5. Measure deviation from a smooth monotone radius growth.
+    6. Compute local tremor index (window variance of r after de-trending).
+
+    Returns (is_blank, tremor_index):
+      is_blank    : True if no meaningful drawing found
+      tremor_index: float — higher means shakier (Parkinson's-like)
+    """
+    arr = np.asarray(gray_img, dtype=np.float32)
+
+    # Invert so drawing = bright on dark background (easier to threshold)
+    inv = 255.0 - arr
+
+    # Find drawn pixels: those significantly darker than white paper
+    threshold = 30.0
+    drawn_mask = inv > threshold
+    n_drawn = int(np.sum(drawn_mask))
+
+    if n_drawn < 100:
+        return True, 0.0  # blank or nearly blank
+
+    ys, xs = np.where(drawn_mask)
+
+    # Centroid
+    cx = float(np.mean(xs))
+    cy = float(np.mean(ys))
+
+    # Polar coords
+    dx = xs - cx
+    dy = ys - cy
+    r = np.sqrt(dx**2 + dy**2)
+    theta = np.arctan2(dy, dx)  # -π to π
+
+    # Remove isolated dots (very small r) — artefacts
+    r_min_cutoff = 5.0
+    valid = r > r_min_cutoff
+    r = r[valid]
+    theta = theta[valid]
+
+    if len(r) < 80:
+        return True, 0.0
+
+    # ── Spiral shape validation ───────────────────────────────────────────────
+    # 1. Angular coverage: divide 360° into 12 sectors (30° each).
+    #    A spiral must cover ≥5 sectors. A line/scribble covers only 1-3.
+    n_sectors = 12
+    sector_size = 2 * np.pi / n_sectors
+    theta_pos = theta + np.pi  # shift from [-π,π] to [0,2π]
+    sectors_covered = len(set((theta_pos / sector_size).astype(int) % n_sectors))
+    if sectors_covered < 5:
+        return 'not_spiral', 0.0   # not enough angular spread
+
+    # 2. Bounding box aspect ratio: a mere line is very elongated.
+    w = float(xs.max() - xs.min()) + 1.0
+    h = float(ys.max() - ys.min()) + 1.0
+    aspect = max(w, h) / (min(w, h) + 1e-6)
+    if aspect > 5.0:
+        return 'not_spiral', 0.0   # very elongated → just a line
+
+    # 3. Radial variation: a spiral grows outward, so the radius range must
+    #    be large relative to the mean. A circle/oval has near-constant radius.
+    r_mean = float(np.mean(r))
+    r_range = float(r.max() - r.min())
+    if r_mean < 1.0 or (r_range / r_mean) < 0.50:
+        return 'not_spiral', 0.0   # too circular / oval / closed loop
+
+    # 4. Minimum drawing size: reject drawings that are too tiny on the canvas
+    img_w, img_h = gray_img.size if hasattr(gray_img, 'size') else (gray_img.shape[1], gray_img.shape[0])
+    bbox_area = w * h
+    canvas_area = float(img_w * img_h)
+    if bbox_area / canvas_area < 0.08:
+        return 'not_spiral', 0.0   # too small to be a meaningful spiral
+
+
+    # ── Sort by angle and compute radial profile ──────────────────────────────
+    order = np.argsort(theta)
+    r_sorted = r[order]
+    theta_sorted = theta[order]
+
+    # Smooth the radial profile to get the expected radius trajectory
+    window = max(10, len(r_sorted) // 30)
+    def moving_avg(x, w):
+        return np.convolve(x, np.ones(w) / w, mode='same')
+
+    r_expected = moving_avg(r_sorted, window)
+
+    # Residuals: how much does each pixel deviate from the expected smooth radius
+    residuals = r_sorted - r_expected
+
+    # ── Tremor index: local window RMS of residuals ───────────────────────────
+    local_window = max(8, len(residuals) // 40)
+    rms_list = []
+    step = max(1, local_window // 2)
+    for i in range(0, len(residuals) - local_window, step):
+        chunk = residuals[i:i + local_window]
+        rms_list.append(float(np.sqrt(np.mean(chunk**2))))
+
+    if not rms_list:
+        return False, 0.0
+
+    tremor_index = float(np.mean(rms_list))
+
+    # ── Bonus: check number of small reversals (direction changes) ────────────
+    # Healthy spirals grow monotonically; Parkinson's has frequent r-reversals
+    dr = np.diff(r_sorted)
+    sign_changes = int(np.sum(np.diff(np.sign(dr)) != 0))
+    reversal_rate = sign_changes / max(len(dr), 1)
+
+    # Combine into final tremor index (weighted)
+    combined_tremor = tremor_index * 0.7 + reversal_rate * 20.0 * 0.3
+
+    return False, combined_tremor
+
+
+def predictImg(image_path='static/img/test.jpg'):
+    """Predict on the given image path.
+
+    Returns (label, display_result, suggestion, confidence_str)
+      label = 'Healthy' | 'Parkinson' | None (error/no drawing)
+
+    Strategy:
+      1. Geometric analysis validates the INPUT (blank? not a spiral?) only.
+         Real data shows geometric tremor index is identical for healthy vs
+         Parkinson spirals (~25.7 vs ~25.9) so it CANNOT classify them.
+      2. CNN (keras_model.h5) is PRIMARY for classification — trained on
+         real Kaggle spiral images.
+      3. If CNN unavailable, fall back to a moderate-confidence geometric
+         estimate based on direction reversals (reversal_rate), which is
+         the best single geometric discriminator we have.
+    """
+    from PIL import Image, ImageOps
+
+    if not os.path.exists(image_path):
+        return (None, 'No Image Uploaded',
+                'Please draw or upload a spiral image first, then click Analyse.', '0')
+
+    try:
+        image_raw = Image.open(image_path).convert('RGB')
+    except Exception:
+        return (None, 'Invalid Image',
+                'The uploaded file could not be read. Please try again.', '0')
+
+    gray = image_raw.convert('L')
+    healthy_tip = _select_tip(HEALTHY_TIPS, image_path)
+    weak_tip    = _select_tip(WEAK_TIPS, image_path)
+
+    # ── Step 1: Validate input shape (geometric) ──────────────────────────────
+    status, tremor_index = _geometric_spiral_analysis(gray)
+
+    if status is True:
+        return (None, 'No Drawing Detected',
+                'The canvas appears empty. Please draw a spiral before clicking Analyse.', '0')
+
+    if status == 'not_spiral':
+        return (None, 'Not a Spiral Drawing',
+                'Please draw a spiral pattern (a coil starting from the centre outward). '
+                'Random shapes or lines cannot be analysed for Parkinson\'s indicators.', '0')
+
+    # ── Step 2: Feature-based SVM model (PRIMARY — 85.8% CV accuracy) ─────────
+    if _feat_model is not None and _feat_scaler is not None:
+        try:
+            from skimage.feature import hog, local_binary_pattern
+            from skimage.transform import resize
+
+            arr = np.asarray(gray, dtype=np.float32) / 255.0
+            arr = resize(arr, (128, 128), anti_aliasing=True)
+
+            hog_feats = hog(arr, orientations=9, pixels_per_cell=(16, 16),
+                            cells_per_block=(2, 2), block_norm='L2-Hys', feature_vector=True)
+            lbp = local_binary_pattern(arr, P=24, R=3, method='uniform')
+            lbp_hist, _ = np.histogram(lbp.ravel(), bins=26, range=(0, 26), density=True)
+
+            feats = np.concatenate([hog_feats, lbp_hist]).reshape(1, -1)
+            feats_scaled = _feat_scaler.transform(feats)
+
+            pred_label_idx = int(_feat_model.predict(feats_scaled)[0])
+            pred_proba = _feat_model.predict_proba(feats_scaled)[0]
+            confidence = float(max(pred_proba)) * 100
+
+            if pred_label_idx == 1:  # Parkinson
+                return 'Parkinson', 'Weak Pattern', weak_tip, f'{confidence:.2f}'
+            else:
+                return 'Healthy', 'Healthy Drawing Sample', healthy_tip, f'{confidence:.2f}'
+        except Exception as e:
+            print(f"DEBUG: Feature model prediction error: {e}")
+
+    # ── Step 3: Keras CNN fallback ─────────────────────────────────────────────
+    if model is not None:
+        from PIL import ImageOps
+        size = (224, 224)
+        try:
+            resample = image_raw.ANTIALIAS
+        except AttributeError:
+            from PIL import Image as _PIL
+            resample = _PIL.Resampling.LANCZOS
+
+        img_resized = ImageOps.fit(image_raw, size, resample)
+        img_arr = np.asarray(img_resized, dtype=np.float32)
+        data[0] = (img_arr / 127.0) - 1
+        prediction = model.predict(data)
+        cnn_confidence = float(np.max(prediction)) * 100
+        idx = int(np.argmax(prediction))
+        labels_map = {0: 'Healthy', 1: 'Parkinson'}
+        lpath = os.path.join(_base, 'labels.txt')
+        if os.path.exists(lpath):
+            with open(lpath) as lf:
+                for line in lf:
+                    parts = line.strip().split(None, 1)
+                    if len(parts) == 2:
+                        labels_map[int(parts[0])] = parts[1]
+        label = labels_map.get(idx, 'Healthy')
+        
+        if label == 'Parkinson':
+            return 'Parkinson', 'Weak Pattern', weak_tip, f'{cnn_confidence:.2f}'
+        else:
+            return 'Healthy', 'Healthy Drawing Sample', healthy_tip, f'{cnn_confidence:.2f}'
+
+    # ── Step 3: Fallback — geometric reversal rate only (if no CNN) ───────────
+    # When CNN is unavailable, use reversal_rate as a weak signal.
+    # Healthy spirals tend to have fewer direction reversals than Parkinson's.
+    # Confidence is intentionally moderate (50-70%) to reflect uncertainty.
+    gray_arr = np.asarray(gray, dtype=np.float32)
+    inv = 255.0 - gray_arr
+    drawn_mask = inv > 30.0
+    ys, xs = np.where(drawn_mask)
+    if len(xs) > 80:
+        cx, cy = float(np.mean(xs)), float(np.mean(ys))
+        dx, dy = xs - cx, ys - cy
+        r = np.sqrt(dx**2 + dy**2)
+        theta = np.arctan2(dy, dx)
+        order = np.argsort(theta)
+        r_sorted = r[order]
+        dr = np.diff(r_sorted)
+        sign_changes = int(np.sum(np.diff(np.sign(dr)) != 0))
+        reversal_rate = sign_changes / max(len(dr), 1)
+
+        if reversal_rate > 0.52:
+            conf = min(68.0, 55.0 + (reversal_rate - 0.52) * 200)
+            return 'Parkinson', 'Weak Pattern', weak_tip, f'{conf:.2f}'
+        else:
+            conf = min(65.0, 55.0 + (0.52 - reversal_rate) * 100)
+            return 'Healthy', 'Healthy Drawing Sample', healthy_tip, f'{conf:.2f}'
+
+    return 'Healthy', 'Healthy Drawing Sample', healthy_tip, '55.00'

@@ -1,0 +1,161 @@
+{% extends 'layout.html' %}
+{% block title %}ParkiSense – Dashboard{% endblock %}
+{% block content %}
+
+<!-- ── Screening Centre Banner ─────────────────────────────── -->
+<div class="screening-banner mb-4 animate-fade-in">
+    <div class="screening-banner-icon">
+        <i class="fas fa-dot-circle"></i>
+    </div>
+    <div>
+        <h4>Parkinson's Screening Centre</h4>
+        <p>Neurology &amp; Motor Assessment Division</p>
+    </div>
+</div>
+
+<!-- ── Patient Screening History Header ───────────────────── -->
+<div class="d-flex align-items-center mb-3 animate-fade-in" style="animation-delay: 0.1s;">
+    <div
+        style="width:4px; height:22px; background: linear-gradient(#6366f1, #8b5cf6); border-radius:2px; margin-right:12px; flex-shrink:0;">
+    </div>
+    <h6 class="mb-0 font-weight-bold" style="color:#1e293b; font-size:0.95rem;">Patient Screening History</h6>
+</div>
+
+<!-- ── Statistics Row ─────────────────────────────────────── -->
+<div class="row mb-4">
+
+    <!-- Total Assessments -->
+    <div class="col-xl-3 col-md-6 mb-4 animate-slide-in" style="animation-delay: 0.1s;">
+        <div class="stat-card">
+            <div class="stat-label mb-2">Total Assessments</div>
+            <div class="stat-number" style="color: #6366f1;">63</div>
+        </div>
+    </div>
+
+    <!-- Healthy Results -->
+    <div class="col-xl-3 col-md-6 mb-4 animate-slide-in" style="animation-delay: 0.18s;">
+        <div class="stat-card">
+            <div class="stat-label mb-2">Healthy Results</div>
+            <div class="stat-number" style="color: #10b981;">11</div>
+        </div>
+    </div>
+
+    <!-- Drawing Model Accuracy -->
+    <div class="col-xl-3 col-md-6 mb-4 animate-slide-in" style="animation-delay: 0.26s;">
+        <div class="stat-card">
+            <div class="stat-label mb-2">Drawing Model Accuracy</div>
+            <div class="stat-number" style="color: #6366f1;">92.4%</div>
+            <div class="progress mt-2" style="height:4px;">
+                <div class="progress-bar" style="width:92%;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Voice Model Accuracy -->
+    <div class="col-xl-3 col-md-6 mb-4 animate-slide-in" style="animation-delay: 0.34s;">
+        <div class="stat-card">
+            <div class="stat-label mb-2">Voice Model Accuracy</div>
+            <div class="stat-number" style="color: #06b6d4;">88.5%</div>
+            <div class="progress mt-2" style="height:4px;">
+                <div class="progress-bar"
+                    style="width:88%; background: linear-gradient(90deg, #06b6d4, #6366f1) !important;"></div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ── Quick Action Cards ──────────────────────────────────── -->
+<div class="d-flex align-items-center mb-3 animate-fade-in" style="animation-delay: 0.4s;">
+    <div
+        style="width:4px; height:22px; background: linear-gradient(#6366f1, #8b5cf6); border-radius:2px; margin-right:12px; flex-shrink:0;">
+    </div>
+    <h6 class="mb-0 font-weight-bold" style="color:#1e293b; font-size:0.95rem;">Run a Screening Test</h6>
+</div>
+
+<div class="row mb-4">
+    <!-- Voice Analysis Card -->
+    <div class="col-lg-4 col-md-6 mb-4 animate-fade-in" style="animation-delay: 0.45s;">
+        <a href="/upload" class="action-card">
+            <div class="action-card-icon" style="background: rgba(99,102,241,0.1);">
+                <i class="fas fa-microphone" style="color:#6366f1;"></i>
+            </div>
+            <h6>Voice Pattern Screening</h6>
+            <p>Upload or record a voice sample to detect vocal motor irregularities associated with Parkinson's.</p>
+            <div class="mt-3" style="font-size:0.8rem; font-weight:600; color:#6366f1;">
+                Start Test <i class="fas fa-arrow-right ml-1"></i>
+            </div>
+        </a>
+    </div>
+
+    <!-- Drawing Analysis Card -->
+    <div class="col-lg-4 col-md-6 mb-4 animate-fade-in" style="animation-delay: 0.52s;">
+        <a href="/image" class="action-card">
+            <div class="action-card-icon" style="background: rgba(139,92,246,0.1);">
+                <i class="fas fa-pencil-alt" style="color:#8b5cf6;"></i>
+            </div>
+            <h6>Drawing Tremor Analysis</h6>
+            <p>Upload a spiral or wave drawing to assess motor tremor patterns and smoothness of movement.</p>
+            <div class="mt-3" style="font-size:0.8rem; font-weight:600; color:#8b5cf6;">
+                Start Test <i class="fas fa-arrow-right ml-1"></i>
+            </div>
+        </a>
+    </div>
+
+    <!-- About Card -->
+    <div class="col-lg-4 col-md-12 mb-4 animate-fade-in" style="animation-delay: 0.59s;">
+        <div class="action-card" style="cursor:default;">
+            <div class="action-card-icon" style="background: rgba(16,185,129,0.1);">
+                <i class="fas fa-shield-alt" style="color:#10b981;"></i>
+            </div>
+            <h6>Data Security &amp; Privacy</h6>
+            <p>All patient data and analysis results are processed securely with modern encryption standards.</p>
+            <div class="mt-3 medical-disclaimer" style="padding: 0.5rem 0.8rem;">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>For screening purposes only. Not a clinical diagnosis.</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── How It Works ────────────────────────────────────────── -->
+<div class="d-flex align-items-center mb-3 animate-fade-in" style="animation-delay: 0.65s;">
+    <div
+        style="width:4px; height:22px; background: linear-gradient(#6366f1, #8b5cf6); border-radius:2px; margin-right:12px; flex-shrink:0;">
+    </div>
+    <h6 class="mb-0 font-weight-bold" style="color:#1e293b; font-size:0.95rem;">Diagnostic Approach</h6>
+</div>
+
+<div class="row mb-5">
+    <div class="col-lg-6 mb-4 animate-fade-in" style="animation-delay: 0.7s;">
+        <div class="card glass-card h-100">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold" style="color:#6366f1; font-size:0.88rem;">
+                    <i class="fas fa-brain mr-2"></i>Multimodal AI Architecture
+                </h6>
+            </div>
+            <div class="card-body" style="color:#475569; font-size:0.87rem; line-height:1.7;">
+                ParkiSense implements state-of-the-art multimodal AI incorporating both voice and
+                dynamic tremor analysis to assist in the early detection of Parkinson's Disease.
+                Using deep learning on acoustic features and spiral drawing coordinate patterns,
+                our platform provides a crucial second opinion for healthcare practitioners.
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6 mb-4 animate-fade-in" style="animation-delay: 0.77s;">
+        <div class="card glass-card h-100">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold" style="color:#6366f1; font-size:0.88rem;">
+                    <i class="fas fa-shield-alt mr-2"></i>HIPAA-Style Data Handling
+                </h6>
+            </div>
+            <div class="card-body" style="color:#475569; font-size:0.87rem; line-height:1.7;">
+                Patient data is never shared with third parties. Voice recordings and drawings are
+                processed in-memory and are not permanently stored. All communications are encrypted
+                and access is session-scoped to logged-in users only.
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

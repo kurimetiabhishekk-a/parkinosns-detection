@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: parkisense
+    runtime: python
+    buildCommand: "pip install -r requirements_render.txt"
+    startCommand: "gunicorn main:app"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.12
+      - key: FLASK_ENV
+        value: production
