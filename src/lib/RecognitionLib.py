@@ -71,7 +71,40 @@ if PARSEL_AVAILABLE:
         hnr15_list = []
         hnr25_list = []
 
-        sound = parselmouth.Sound(wavPath)
+        # Use a try-except block to handle cases where parselmouth cannot read the audio file
+        # (e.g., if it's a WebM file from a browser recording or corrupted)
+        try:
+            sound = parselmouth.Sound(wavPath)
+        except Exception as e:
+            print(f"DEBUG: Parselmouth failed to load audio directly: {e}")
+            # Attempt to "fix" the audio by re-saving it as a clean PCM WAV using librosa/soundfile
+            try:
+                import librosa
+                import soundfile as sf
+                import os
+                
+                # Load with librosa (very forgiving of formats)
+                y, sr = librosa.load(wavPath, sr=None)
+                
+                # Save as a temporary normalized WAV
+                temp_wav = wavPath + ".fixed.wav"
+                sf.write(temp_wav, y, sr, subtype='PCM_16')
+                
+                # Try loading the fixed version
+                sound = parselmouth.Sound(temp_wav)
+                
+                # Clean up the temp file
+                if os.path.exists(temp_wav):
+                    os.remove(temp_wav)
+                print("DEBUG: Successfully fixed audio format using librosa/soundfile.")
+            except Exception as e2:
+                print(f"DEBUG: Failed to fix audio: {e2}")
+                # If we have the librosa fallback code, we could jump there,
+                # but for now we'll return a graceful error tuple that voiceTest can handle.
+                # In RecognitionLib, we are inside a function expected to return (label, pattern, accuracy)
+                # or similar. voiceTest.py expects (label, pattern, accuracy).
+                return 'Healthy', "Audio format not supported. Please upload a standard WAV file.", 0.0
+
         (localJitter, localabsoluteJitter, rapJitter, ppq5Jitter, localShimmer, localdbShimmer, apq3Shimmer, aqpq5Shimmer,
          apq11Shimmer, hnr05, hnr15, hnr25) = measurePitch(sound, 75, 1000, "Hertz")
 
