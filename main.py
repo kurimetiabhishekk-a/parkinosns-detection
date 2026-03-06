@@ -241,8 +241,8 @@ def image():
             except Exception as e:
                 print(f"DEBUG: Canvas save error: {e}")
         f = request.files.get('doc')
-        if f:
-            f.save(os.path.join(savepath, secure_filename('test.jpg')))
+        if f and f.filename:
+            f.save(os.path.join(savepath, 'test.jpg'))
             return redirect(url_for('image_test'))
     return render_template('image.html')
 
@@ -260,14 +260,18 @@ def image_test():
 @login_required
 def upload():
     if request.method == 'POST':
+        savepath = 'upload/'
+        os.makedirs(savepath, exist_ok=True)
+        f = request.files.get('doc')
+        
         if request.form.get('uploadbutton') == 'Upload':
-            savepath = 'upload/'
-            os.makedirs(savepath, exist_ok=True)
-            f = request.files.get('doc')
-            if f:
-                f.save(os.path.join(savepath, secure_filename('test.wav')))
+            if f and f.filename:
+                f.save(os.path.join(savepath, 'test.wav'))
                 return render_template('upload.html', file=f.filename, mgs='File uploaded..!!')
         elif request.form.get('uploadbutton') == 'Detect PD':
+            if f and f.filename:
+                f.save(os.path.join(savepath, 'test.wav'))
+                
             voice_result = testVoice()
             if len(voice_result) == 2:
                 _, msg = voice_result

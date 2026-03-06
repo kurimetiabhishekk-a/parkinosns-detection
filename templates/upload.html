@@ -439,7 +439,7 @@
 							<i class="fas fa-microphone"></i>
 							<span id="recordBtnText">Record Voice Sample</span>
 						</button>
-						<div class="record-status" id="recordStatus">Click to start a 5-second recording</div>
+						<div class="record-status" id="recordStatus">Click to start, then click again to stop</div>
 					</div>
 
 					<div class="or-divider">OR</div>
@@ -636,22 +636,14 @@
 				mediaRecorder.onstart = () => {
 					isRecording = true;
 					recordBtn.classList.add('recording');
-					recordBtnText.textContent = 'Recording...';
+					recordBtnText.textContent = 'Stop Recording';
 
-					// Countdown timer
-					let timeLeft = 5;
-					recordStatus.textContent = `Recording: ${timeLeft}s remaining`;
+					let duration = 0;
+					recordStatus.textContent = `Recording: ${duration}s`;
 
 					const timer = setInterval(() => {
-						timeLeft--;
-						if (timeLeft > 0) {
-							recordStatus.textContent = `Recording: ${timeLeft}s remaining`;
-						} else {
-							clearInterval(timer);
-							if (mediaRecorder.state !== 'inactive') {
-								mediaRecorder.stop();
-							}
-						}
+						duration++;
+						recordStatus.textContent = `Recording: ${duration}s`;
 					}, 1000);
 
 					// Stop tracks on completion
@@ -660,7 +652,7 @@
 						isRecording = false;
 						recordBtn.classList.remove('recording');
 						recordBtnText.textContent = 'Record Again';
-						recordStatus.textContent = 'Processing recording...';
+						recordStatus.textContent = `Processing recording... (${duration}s)`;
 
 						stream.getTracks().forEach(track => track.stop());
 
@@ -684,6 +676,29 @@
 				console.error("Error accessing microphone: ", err);
 				recordStatus.textContent = "Error: Microphone access denied.";
 				recordStatus.style.color = "#dc2626";
+			}
+		});
+	}
+
+	// Prevent submitting while recording or if no file
+	const voiceForm = document.getElementById('voiceUploadForm');
+	if (voiceForm) {
+		voiceForm.addEventListener('submit', function (e) {
+			if (isRecording) {
+				e.preventDefault();
+				alert("Please stop your recording before analysing.");
+				return;
+			}
+			if (document.getElementById('audioInput').files.length === 0) {
+				e.preventDefault();
+				alert("Please upload or record an audio file first.");
+				return;
+			}
+
+			// If file was recorded via browser, we can show a quick loading state
+			let btn = document.querySelector('button[name="uploadbutton"][value="Detect PD"]');
+			if (btn) {
+				btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analysing...';
 			}
 		});
 	}

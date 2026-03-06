@@ -169,11 +169,10 @@ if PARSEL_AVAILABLE:
                     probas   = model.predict_proba(row_scaled)[0]
                     val      = int(np.argmax(probas))
                     raw_conf = float(np.max(probas))          # 0.5 – 1.0
-                    accuracy = round(60.0 + (raw_conf - 0.5) / 0.5 * 28.0, 2)
-                    accuracy = max(60.0, min(88.0, accuracy))
+                    accuracy = round(raw_conf * 100.0, 2)
                 else:
                     val      = int(model.predict(row_scaled)[0])
-                    accuracy = min(88.0, bundle.get("test_accuracy", 82.0))
+                    accuracy = round(bundle.get("test_accuracy", 82.0), 2)
 
             else:
                 # ── Old plain model ──────────────────────────────────────────
@@ -189,8 +188,7 @@ if PARSEL_AVAILABLE:
                     probas   = clf.predict_proba(toPred)[0]
                     val      = int(np.argmax(probas))
                     raw_conf = float(np.max(probas))          # 0.5 – 1.0
-                    accuracy = round(60.0 + (raw_conf - 0.5) / 0.5 * 28.0, 2)
-                    accuracy = max(60.0, min(88.0, accuracy))
+                    accuracy = round(raw_conf * 100.0, 2)
                 else:
                     val = int(clf.predict(toPred)[0])
                     accuracy = 82.0

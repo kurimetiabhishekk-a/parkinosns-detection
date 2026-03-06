@@ -130,28 +130,28 @@ def _geometric_spiral_analysis(gray_img):
     sector_size = 2 * np.pi / n_sectors
     theta_pos = theta + np.pi  # shift from [-π,π] to [0,2π]
     sectors_covered = len(set((theta_pos / sector_size).astype(int) % n_sectors))
-    if sectors_covered < 5:
+    if sectors_covered < 3:
         return 'not_spiral', 0.0   # not enough angular spread
 
     # 2. Bounding box aspect ratio: a mere line is very elongated.
     w = float(xs.max() - xs.min()) + 1.0
     h = float(ys.max() - ys.min()) + 1.0
     aspect = max(w, h) / (min(w, h) + 1e-6)
-    if aspect > 5.0:
+    if aspect > 8.0:
         return 'not_spiral', 0.0   # very elongated → just a line
 
     # 3. Radial variation: a spiral grows outward, so the radius range must
     #    be large relative to the mean. A circle/oval has near-constant radius.
     r_mean = float(np.mean(r))
     r_range = float(r.max() - r.min())
-    if r_mean < 1.0 or (r_range / r_mean) < 0.50:
+    if r_mean < 1.0 or (r_range / r_mean) < 0.20:
         return 'not_spiral', 0.0   # too circular / oval / closed loop
 
     # 4. Minimum drawing size: reject drawings that are too tiny on the canvas
     img_w, img_h = gray_img.size if hasattr(gray_img, 'size') else (gray_img.shape[1], gray_img.shape[0])
     bbox_area = w * h
     canvas_area = float(img_w * img_h)
-    if bbox_area / canvas_area < 0.08:
+    if bbox_area / canvas_area < 0.02:
         return 'not_spiral', 0.0   # too small to be a meaningful spiral
 
 
@@ -218,7 +218,14 @@ def predictImg(image_path='static/img/test.jpg'):
                 'Please draw or upload a spiral image first, then click Analyse.', '0')
 
     try:
-        image_raw = Image.open(image_path).convert('RGB')
+        image_raw = Image.open(image_path)
+        if image_raw.mode in ('RGBA', 'LA') or (image_raw.mode == 'P' and 'transparency' in image_raw.info):
+            bg = Image.new('RGB', image_raw.size, (255, 255, 255))
+            mask = image_raw.convert('RGBA').split()[3]
+            bg.paste(image_raw, mask)
+            image_raw = bg
+        else:
+            image_raw = image_raw.convert('RGB')
     except Exception:
         return (None, 'Invalid Image',
                 'The uploaded file could not be read. Please try again.', '0')
@@ -258,11 +265,9 @@ def predictImg(image_path='static/img/test.jpg'):
 
             pred_label_idx = int(_feat_model.predict(feats_scaled)[0])
             pred_proba = _feat_model.predict_proba(feats_scaled)[0]
-            # Scale raw probability to a realistic 60–88% range for a screening tool.
-            # Raw SVM probas can be overconfident (95–99%), which is misleading.
+            # Scale raw probability to a realistic percentage
             raw_conf = float(max(pred_proba))  # 0.5 – 1.0
-            confidence = round(60.0 + (raw_conf - 0.5) / 0.5 * 28.0, 2)  # → 60–88%
-            confidence = max(60.0, min(88.0, confidence))
+            confidence = round(raw_conf * 100.0, 2)
 
             if pred_label_idx == 1:  # Parkinson
                 return 'Parkinson', 'Weak Pattern', weak_tip, f'{confidence:.2f}'
