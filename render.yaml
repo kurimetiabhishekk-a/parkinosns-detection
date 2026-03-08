@@ -14,6 +14,6 @@ services:
       - key: SECRET_KEY
         value: parkisense_secret_render_2024
       - key: MONGODB_URI
-        sync: false
+        value: mongodb+srv://abhishekkurimeti97_db_user:E1lOIPImeOw43Izw@cluster0.gege15n.mongodb.net/parkisense?retryWrites=true&w=majority
       - key: ENCRYPTION_KEY
-        sync: false
+        value: opVjAjT3z__mi9-j0dWS6idv5GqHFuk7CFQvuwB5Gio=
