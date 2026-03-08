@@ -299,6 +299,7 @@ else:
         try:
             import librosa
             import numpy as np
+            import random
 
             y, sr = librosa.load(wavPath, sr=None, mono=True)
             if len(y) == 0:
