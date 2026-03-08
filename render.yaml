@@ -15,3 +15,5 @@ services:
         value: parkisense_secret_render_2024
       - key: MONGODB_URI
         sync: false
+      - key: ENCRYPTION_KEY
+        sync: false

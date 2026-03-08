@@ -25,3 +25,5 @@ soundfile
 # Utilities
 python-dateutil
 requests
+python-dotenv
+cryptography

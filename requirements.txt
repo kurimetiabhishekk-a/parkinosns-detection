@@ -27,3 +27,6 @@ kaggle
 # ─── Utilities ─────────────────────────────────────────────────
 python-dateutil
 requests
+python-dotenv
+cryptography
+pymongo[srv]

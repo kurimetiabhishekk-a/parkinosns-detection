@@ -1,15 +1,46 @@
-# ── Imports ───────────────────────────────────────────────────────────────────
-from flask import Flask, render_template, redirect, url_for, request, session
-from werkzeug.utils import secure_filename
-from functools import wraps
-from datetime import datetime
 import os
 import time
+import base64
+from datetime import datetime
+from functools import wraps
+from flask import Flask, render_template, redirect, url_for, request, session
+from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash, check_password_hash
+from cryptography.fernet import Fernet
+from dotenv import load_dotenv
+
 from utils import *
 from voiceTest import *
 
+# Load environment variables
+load_dotenv()
+
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'parkisense_secret_2024')
+app.secret_key = (os.environ.get('SECRET_KEY') or 'parkisense_secure_default_key').strip()
+
+# ── Encryption Setup ──────────────────────────────────────────────────────────
+ENCRYPTION_KEY = (os.environ.get('ENCRYPTION_KEY') or '').strip()
+fernet = None
+if ENCRYPTION_KEY:
+    try:
+        fernet = Fernet(ENCRYPTION_KEY.encode())
+    except Exception as e:
+        print(f"ERROR: Invalid ENCRYPTION_KEY format: {e}")
+
+def encrypt_data(data):
+    """Encrypt a string if fernet is available."""
+    if not fernet or not data:
+        return data
+    return fernet.encrypt(data.encode()).decode()
+
+def decrypt_data(data):
+    """Decrypt a string if fernet is available."""
+    if not fernet or not data:
+        return data
+    try:
+        return fernet.decrypt(data.encode()).decode()
+    except Exception:
+        return "[Encrypted]"
 app.config["CACHE_TYPE"] = "null"
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
@@ -17,7 +48,11 @@ app.config['SESSION_COOKIE_SECURE'] = os.environ.get('FLASK_ENV') == 'production
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 
 # ── MongoDB (users only: login / register / forgot-password) ──────────────────
-MONGODB_URI = os.environ.get('MONGODB_URI', '')
+MONGODB_URI = (os.environ.get('MONGODB_URI') or '').strip()
+if MONGODB_URI.startswith('"') and MONGODB_URI.endswith('"'):
+    MONGODB_URI = MONGODB_URI[1:-1]
+MONGODB_URI = MONGODB_URI.strip()
+
 _mongo_client = None   # MongoClient (kept alive for connection pooling)
 _mongo_db     = None   # parkisense database handle
 
@@ -43,14 +78,15 @@ def get_users_collection():
         from pymongo import MongoClient
         _mongo_client = MongoClient(
             MONGODB_URI,
-            serverSelectionTimeoutMS=8000,
-            connectTimeoutMS=8000,
-            socketTimeoutMS=8000,
+            serverSelectionTimeoutMS=5000,
+            connectTimeoutMS=5000,
+            socketTimeoutMS=5000,
+            retryWrites=True
         )
         _mongo_client.admin.command('ping')
         _mongo_db = _mongo_client['parkisense']
         _mongo_db.users.create_index('email', unique=True)
-        print("DEBUG: MongoDB connected successfully.")
+        print(f"DEBUG: MongoDB connected successfully to {_mongo_client.address}")
         return _mongo_db.users
     except Exception as e:
         print(f"CRITICAL: MongoDB connection failed — {e}")
@@ -68,14 +104,14 @@ def init_db():
             if not col.find_one({'email': 'demo@parkisense.com'}):
                 col.insert_one({
                     'date': datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-                    'name': 'Demo User',
+                    'name': encrypt_data('Demo User'),
                     'email': 'demo@parkisense.com',
-                    'password': 'demo1234',
-                    'pet': 'buddy'
+                    'password': generate_password_hash('demo1234'),
+                    'pet': encrypt_data('buddy')
                 })
                 print("DEBUG: Demo user seeded in MongoDB.")
         else:
-            print("WARNING: No MongoDB URI set. Login will fail until MONGODB_URI is configured.")
+            print("WARNING: No MongoDB URI set or connection failed. Login will fail until MONGODB_URI is configured.")
     except Exception as e:
         print(f"DEBUG: DB Init Error: {e}")
 
@@ -117,12 +153,12 @@ def login():
             if col is None:
                 error = "Database unavailable. Please try again later."
             else:
-                user = col.find_one({'email': email, 'password': password})
-                if user:
-                    session['name'] = user['name']
+                user = col.find_one({'email': email})
+                if user and check_password_hash(user['password'], password):
+                    session['name'] = decrypt_data(user['name'])
                     return redirect(url_for('home'))
                 else:
-                    error = "Account not found. If new, click 'Create one' to register. (Or use demo@parkisense.com / demo1234)"
+                    error = "Invalid email or password."
         except Exception as e:
             print(f"DEBUG: Login error: {e}")
             error = "Temporary connection issue. Please try again."
@@ -161,8 +197,10 @@ def register():
             else:
                 col.insert_one({
                     'date': datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-                    'name': name, 'email': email,
-                    'password': password, 'pet': pet
+                    'name': encrypt_data(name),
+                    'email': email,
+                    'password': generate_password_hash(password),
+                    'pet': encrypt_data(pet)
                 })
                 return redirect(url_for('login'))
         except Exception as e:
@@ -183,9 +221,13 @@ def forgot():
             if col is None:
                 error = "Database unavailable. Please try again later."
             else:
-                user = col.find_one({'email': email, 'pet': pet})
-                if user:
-                    error = 'Your password: ' + user['password']
+                # We can't query directly by encrypted pet name unless we use a blind index
+                # So we find by email and then verify the pet name
+                user = col.find_one({'email': email})
+                if user and decrypt_data(user['pet']) == pet:
+                    # In a real app, send a reset link. Here we just confirm identity for now.
+                    # Returning the password even if hashed isn't useful for the user.
+                    error = 'Identity verified. Please contact admin to reset password (feature coming soon).'
                 else:
                     error = 'Information not found.'
         except Exception as e:
