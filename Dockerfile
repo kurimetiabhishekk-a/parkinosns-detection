@@ -11,20 +11,8 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir \
-    Flask==2.2.5 \
-    Werkzeug==2.2.3 \
-    pandas \
-    numpy \
-    scikit-learn \
-    joblib \
-    Pillow \
-    opencv-python-headless \
-    tensorflow-cpu \
-    praat-parselmouth \
-    librosa \
-    gunicorn
+COPY requirements_render.txt .
+RUN pip install --no-cache-dir -r requirements_render.txt
 
 # Copy project files
 COPY . .
@@ -32,7 +20,7 @@ COPY . .
 # Create folders needed at runtime
 RUN mkdir -p static/img upload
 
-EXPOSE 8080
+EXPOSE 10000
 
-# Use PORT env var (set by Railway/Render/Fly.io automatically)
-CMD gunicorn --bind 0.0.0.0:${PORT:-8080} --workers 1 --timeout 120 --preload main:app
+# Use PORT env var (set by Render automatically)
+CMD gunicorn --bind 0.0.0.0:${PORT:-10000} --workers 2 --timeout 120 main:app
