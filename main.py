@@ -166,7 +166,8 @@ def login():
                     error = "Invalid email or password."
         except Exception as e:
             print(f"DEBUG: Login error: {e}")
-            error = "Temporary connection issue. Please try again."
+            error = "Database unreachable. Please try again."
+        
         return render_template('login.html', error=error)
     return render_template('login.html')
 
