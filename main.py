@@ -54,7 +54,7 @@ if MONGODB_URI.startswith('"') and MONGODB_URI.endswith('"'):
 MONGODB_URI = MONGODB_URI.strip()
 
 if not MONGODB_URI:
-    raise ValueError("CRITICAL SECURITY ERROR: MONGODB_URI environment variable is missing. Application cannot start.")
+    print("WARNING: MONGODB_URI environment variable is not set. Database features will be unavailable.")
 
 _mongo_client = None   # MongoClient (kept alive for connection pooling)
 _mongo_db     = None   # parkisense database handle
