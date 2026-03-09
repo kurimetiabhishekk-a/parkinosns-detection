@@ -282,28 +282,62 @@ def register():
 @app.route('/forgot', methods=['GET', 'POST'])
 def forgot():
     error = None
+    step = request.form.get('step', '1')
+
     if request.method == 'POST':
-        email = (request.form.get('email') or '').strip().lower()
-        pet = (request.form.get('pet') or '').strip().lower()
-        try:
-            col = get_users_collection()
-            if col is None:
-                error = "Database unavailable. Please try again later."
-            else:
-                # We can't query directly by encrypted pet name unless we use a blind index
-                # So we find by email and then verify the pet name
-                user = col.find_one({'email': email})
-                if user and decrypt_data(user['pet']) == pet:
-                    # In a real app, send a reset link. Here we just confirm identity for now.
-                    # Returning the password even if hashed isn't useful for the user.
-                    error = 'Identity verified. Please contact admin to reset password (feature coming soon).'
+        # ── STEP 1: Verify identity ──────────────────────────────────────────
+        if step == '1':
+            email = (request.form.get('email') or '').strip().lower()
+            pet   = (request.form.get('pet')   or '').strip().lower()
+            try:
+                col = get_users_collection()
+                if col is None:
+                    error = "Database unavailable. Please try again later."
                 else:
-                    error = 'Information not found.'
-        except Exception as e:
-            print(f"DEBUG: Forgot error: {e}")
-            error = "Database busy. Please try again."
-        return render_template('forgot-password.html', error=error)
-    return render_template('forgot-password.html')
+                    user = col.find_one({'email': email})
+                    if user and decrypt_data(user['pet']) == pet:
+                        # Identity verified — show Step 2 (set new password)
+                        return render_template('forgot-password.html',
+                                               step=2, verified_email=email)
+                    else:
+                        error = 'Information not found. Check your email and pet name.'
+            except Exception as e:
+                print(f"DEBUG: Forgot step1 error: {e}")
+                error = "Database busy. Please try again."
+            return render_template('forgot-password.html', error=error, step=1)
+
+        # ── STEP 2: Set new password ─────────────────────────────────────────
+        elif step == '2':
+            email     = (request.form.get('email')     or '').strip().lower()
+            new_pwd   =  request.form.get('new_password')   or ''
+            conf_pwd  =  request.form.get('confirm_password') or ''
+
+            if not new_pwd or len(new_pwd) < 6:
+                return render_template('forgot-password.html', step=2,
+                                       verified_email=email,
+                                       error='Password must be at least 6 characters.')
+            if new_pwd != conf_pwd:
+                return render_template('forgot-password.html', step=2,
+                                       verified_email=email,
+                                       error='Passwords do not match.')
+            try:
+                col = get_users_collection()
+                if col is None:
+                    return render_template('forgot-password.html', step=2,
+                                           verified_email=email,
+                                           error='Database unavailable. Please try again.')
+                col.update_one({'email': email},
+                               {'$set': {'password': generate_password_hash(new_pwd)}})
+                from flask import flash
+                flash('Password reset successfully! Please log in with your new password.', 'success')
+                return redirect(url_for('login'))
+            except Exception as e:
+                print(f"DEBUG: Forgot step2 error: {e}")
+                return render_template('forgot-password.html', step=2,
+                                       verified_email=email,
+                                       error='Failed to update password. Please try again.')
+
+    return render_template('forgot-password.html', step=1)
 
 
 # ── Home ──────────────────────────────────────────────────────────────────────
