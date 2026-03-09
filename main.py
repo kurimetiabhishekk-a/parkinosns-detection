@@ -274,7 +274,7 @@ def register():
                 return redirect(url_for('login'))
         except Exception as e:
             print(f"DEBUG: Register error: {e}")
-            error = "Database busy. Please try again."
+            error = f"Database Error: {str(e)}"
     return render_template('register.html', error=error)
 
 
@@ -455,4 +455,4 @@ def add_header(response):
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
+    app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
