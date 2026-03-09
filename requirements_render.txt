@@ -4,23 +4,17 @@ Werkzeug
 gunicorn
 
 # Database
-pymongo[srv]
 dnspython
 
-# Data & ML
+# ML Fallbacks / Math
 pandas
 numpy<2.0.0
 scikit-learn
 joblib
 scipy
 
-# Image Processing
+# Image / Audio Processors
 Pillow
-scikit-image
-opencv-python-headless
-
-# Audio / Voice Analysis
-praat-parselmouth
 librosa
 soundfile
 
