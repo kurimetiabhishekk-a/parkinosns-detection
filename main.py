@@ -25,13 +25,13 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = (os.environ.get('SECRET_KEY') or 'parkisense_secure_default_key').strip()
 # ── Encryption Setup ──────────────────────────────────────────────────────────
-ENCRYPTION_KEY = (os.environ.get('ENCRYPTION_KEY') or 'opVjAjT3z__mi9-j0dWS6idv5GqHFuk7CFQvuwB5Gio=').strip()
+# Hardcoded to ensure consistency with existing database records
+ENCRYPTION_KEY = 'opVjAjT3z__mi9-j0dWS6idv5GqHFuk7CFQvuwB5Gio='
 fernet = None
-if ENCRYPTION_KEY:
-    try:
-        fernet = Fernet(ENCRYPTION_KEY.encode())
-    except Exception as e:
-        print(f"ERROR: Invalid ENCRYPTION_KEY format: {e}")
+try:
+    fernet = Fernet(ENCRYPTION_KEY.encode())
+except Exception as e:
+    print(f"ERROR: Invalid ENCRYPTION_KEY format: {e}")
 
 def encrypt_data(data):
     """Encrypt a string if fernet is available."""
@@ -131,10 +131,22 @@ init_db()
 
 @app.context_processor
 def inject_now():
+    name = session.get('name', '')
+    # Auto-recovery if session name is corrupted/encrypted
+    if name == "[Encrypted]" and 'user_email' in session:
+        try:
+            col = get_users_collection()
+            user = col.find_one({'email': session['user_email']})
+            if user:
+                name = decrypt_data(user['name'])
+                session['name'] = name # Update session
+        except:
+            pass
+            
     return {
         'now': datetime.now(),
         'timestamp': int(time.time()),
-        'name': session.get('name', '')
+        'name': name
     }
 
 
@@ -167,6 +179,7 @@ def login():
                 user = col.find_one({'email': email})
                 if user and check_password_hash(user['password'], password):
                     session['name'] = decrypt_data(user['name'])
+                    session['user_email'] = email
                     return redirect(url_for('home'))
                 else:
                     error = "Invalid email or password."
@@ -214,6 +227,7 @@ def login_google():
             col.update_one({'email': email}, {'$set': {'name': encrypt_data(name)}})
             
         session['name'] = name
+        session['user_email'] = email
         return redirect(url_for('home'))
         
     except Exception as e:
