@@ -47,78 +47,39 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_SECURE'] = os.environ.get('FLASK_ENV') == 'production'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 
-# ── MongoDB (users only: login / register / forgot-password) ──────────────────
-MONGODB_URI = (os.environ.get('MONGODB_URI') or '').strip()
-if MONGODB_URI.startswith('"') and MONGODB_URI.endswith('"'):
-    MONGODB_URI = MONGODB_URI[1:-1]
-MONGODB_URI = MONGODB_URI.strip()
+import sqlite3
 
-if not MONGODB_URI:
-    print("WARNING: MONGODB_URI environment variable is not set. Database features will be unavailable.")
-
-_mongo_client = None   # MongoClient (kept alive for connection pooling)
-_mongo_db     = None   # parkisense database handle
-
-def get_users_collection():
-    """Return MongoDB 'users' collection. Reconnects automatically if needed."""
-    global _mongo_client, _mongo_db
-
-    # --- Use existing connection if available ---
-    if _mongo_client is not None:
-        try:
-            return _mongo_db.users
-        except Exception:
-            # Handle potential dropped connection handles
-            _mongo_client = None
-            _mongo_db     = None
-
-    if not MONGODB_URI:
-        print("CRITICAL: MONGODB_URI is empty!")
-        return None
-
-    try:
-        from pymongo import MongoClient
-        _mongo_client = MongoClient(
-            MONGODB_URI,
-            serverSelectionTimeoutMS=5000,
-            connectTimeoutMS=5000,
-            socketTimeoutMS=5000,
-            retryWrites=True
-        )
-        # We'll try to get the database handle. If auth fails later during a query, Flask will catch it.
-        _mongo_db = _mongo_client['parkisense']
-        # We try to create index but don't strictly crash here
-        try:
-            _mongo_db.users.create_index('email', unique=True)
-        except:
-            pass
-        return _mongo_db.users
-    except Exception as e:
-        print(f"CRITICAL: MongoClient setup failed — {e}")
-        _mongo_client = None
-        _mongo_db     = None
-        return None
+def get_db_connection():
+    conn = sqlite3.connect('parkisense.db')
+    conn.row_factory = sqlite3.Row
+    return conn
 
 def init_db():
-    """Seed a demo account on startup."""
     os.makedirs('static/img', exist_ok=True)
     os.makedirs('upload', exist_ok=True)
     try:
-        col = get_users_collection()
-        if col is not None:
-            if not col.find_one({'email': 'demo@parkisense.com'}):
-                col.insert_one({
-                    'date': datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-                    'name': encrypt_data('Demo User'),
-                    'email': 'demo@parkisense.com',
-                    'password': generate_password_hash('demo1234'),
-                    'pet': encrypt_data('buddy')
-                })
-                print("DEBUG: Demo user seeded in MongoDB.")
-        else:
-            print("WARNING: No MongoDB URI set or connection failed. Login will fail until MONGODB_URI is configured.")
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT UNIQUE,
+                name TEXT,
+                password TEXT,
+                pet TEXT,
+                date TEXT
+            )
+        ''')
+        # Seed demo user
+        c.execute("SELECT * FROM users WHERE email = 'demo@parkisense.com'")
+        if not c.fetchone():
+            c.execute("INSERT INTO users (email, name, password, pet, date) VALUES (?, ?, ?, ?, ?)",
+                      ('demo@parkisense.com', encrypt_data('Demo User'), generate_password_hash('demo1234'), encrypt_data('buddy'), datetime.now().strftime("%d/%m/%Y %H:%M:%S")))
+        conn.commit()
+        conn.close()
+        print("DEBUG: SQLite DB initialized and demo user seeded.")
     except Exception as e:
-        print(f"DEBUG: DB Init Error: {e}")
+        print(f"DEBUG: SQLite Init Error: {e}")
 
 init_db()
 
@@ -154,16 +115,17 @@ def login():
         email = (request.form.get('email') or '').strip().lower()
         password = request.form.get('password') or ''
         try:
-            col = get_users_collection()
-            if col is None:
-                error = "Database unavailable. Please try again later."
+            conn = get_db_connection()
+            c = conn.cursor()
+            c.execute("SELECT * FROM users WHERE email = ?", (email,))
+            user = c.fetchone()
+            conn.close()
+            
+            if user and check_password_hash(user['password'], password):
+                session['name'] = decrypt_data(user['name'])
+                return redirect(url_for('home'))
             else:
-                user = col.find_one({'email': email})
-                if user and check_password_hash(user['password'], password):
-                    session['name'] = decrypt_data(user['name'])
-                    return redirect(url_for('home'))
-                else:
-                    error = "Invalid email or password."
+                error = "Invalid email or password."
         except Exception as e:
             print(f"DEBUG: Login error: {e}")
             error = "Database unreachable. Please try again."
@@ -195,19 +157,17 @@ def register():
             return render_template('register.html', error=error)
 
         try:
-            col = get_users_collection()
-            if col is None:
-                error = "Database unavailable. Please try again later."
-            elif col.find_one({'email': email}):
+            conn = get_db_connection()
+            c = conn.cursor()
+            c.execute("SELECT email FROM users WHERE email = ?", (email,))
+            if c.fetchone():
                 error = 'User already registered!'
+                conn.close()
             else:
-                col.insert_one({
-                    'date': datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-                    'name': encrypt_data(name),
-                    'email': email,
-                    'password': generate_password_hash(password),
-                    'pet': encrypt_data(pet)
-                })
+                c.execute("INSERT INTO users (email, name, password, pet, date) VALUES (?, ?, ?, ?, ?)",
+                          (email, encrypt_data(name), generate_password_hash(password), encrypt_data(pet), datetime.now().strftime("%d/%m/%Y %H:%M:%S")))
+                conn.commit()
+                conn.close()
                 return redirect(url_for('login'))
         except Exception as e:
             print(f"DEBUG: Register error: {e}")
@@ -223,19 +183,18 @@ def forgot():
         email = (request.form.get('email') or '').strip().lower()
         pet = (request.form.get('pet') or '').strip().lower()
         try:
-            col = get_users_collection()
-            if col is None:
-                error = "Database unavailable. Please try again later."
+            conn = get_db_connection()
+            c = conn.cursor()
+            c.execute("SELECT * FROM users WHERE email = ?", (email,))
+            user = c.fetchone()
+            conn.close()
+            
+            if user and hasattr(user, 'keys') and 'pet' in user.keys() and decrypt_data(user['pet']) == pet:
+                error = 'Identity verified. Please contact admin to reset password (feature coming soon).'
+            elif user and not hasattr(user, 'keys') and decrypt_data(user[4]) == pet: # SQLite Row index 4 is pet
+                 error = 'Identity verified. Please contact admin to reset password (feature coming soon).'
             else:
-                # We can't query directly by encrypted pet name unless we use a blind index
-                # So we find by email and then verify the pet name
-                user = col.find_one({'email': email})
-                if user and decrypt_data(user['pet']) == pet:
-                    # In a real app, send a reset link. Here we just confirm identity for now.
-                    # Returning the password even if hashed isn't useful for the user.
-                    error = 'Identity verified. Please contact admin to reset password (feature coming soon).'
-                else:
-                    error = 'Information not found.'
+                error = 'Information not found.'
         except Exception as e:
             print(f"DEBUG: Forgot error: {e}")
             error = "Database busy. Please try again."
@@ -359,15 +318,15 @@ def diagnose():
     }
 
     # Test MongoDB
+    # Test SQLite DB
     try:
-        col = get_users_collection()
-        if col is not None:
-            # Simple ping
-            _mongo_client.admin.command('ping')
-            status["mongodb"] = "CONNECTED"
-            status["users_count"] = col.count_documents({})
-        else:
-            status["mongodb"] = "NOT_CONFIGURED (URI empty)"
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT COUNT(*) FROM users")
+        count = c.fetchone()[0]
+        status["mongodb"] = "CONNECTED (SQLite DB)"
+        status["users_count"] = count
+        conn.close()
     except Exception as e:
         status["mongodb"] = f"ERROR: {str(e)}"
 
