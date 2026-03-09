@@ -19,7 +19,7 @@ app = Flask(__name__)
 app.secret_key = (os.environ.get('SECRET_KEY') or 'parkisense_secure_default_key').strip()
 
 # ── Encryption Setup ──────────────────────────────────────────────────────────
-ENCRYPTION_KEY = (os.environ.get('ENCRYPTION_KEY') or 'opVjAjT3z__mi9-j0dWS6idv5GqHFuk7CFQvuwB5Gio=').strip()
+ENCRYPTION_KEY = (os.environ.get('ENCRYPTION_KEY') or '').strip()
 fernet = None
 if ENCRYPTION_KEY:
     try:
@@ -48,7 +48,7 @@ app.config['SESSION_COOKIE_SECURE'] = os.environ.get('FLASK_ENV') == 'production
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 
 # ── MongoDB (users only: login / register / forgot-password) ──────────────────
-MONGODB_URI = (os.environ.get('MONGODB_URI') or 'mongodb+srv://abhishekkurimeti97_db_user:ParkiSense_2026_Secure123@cluster0.gege15n.mongodb.net/parkisense?retryWrites=true&w=majority').strip()
+MONGODB_URI = (os.environ.get('MONGODB_URI') or '').strip()
 if MONGODB_URI.startswith('"') and MONGODB_URI.endswith('"'):
     MONGODB_URI = MONGODB_URI[1:-1]
 MONGODB_URI = MONGODB_URI.strip()
