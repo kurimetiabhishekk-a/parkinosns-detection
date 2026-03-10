@@ -471,19 +471,37 @@ def diagnose():
         "mongodb": "unknown",
         "encryption": "unknown",
         "key_prefix": "N/A",
+        "libraries": {},
+        "model_file": "MISSING",
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
+
+    # Test Libraries
+    try:
+        import parselmouth
+        status["libraries"]["parselmouth"] = "AVAILABLE"
+    except ImportError:
+        status["libraries"]["parselmouth"] = "MISSING"
+    
+    try:
+        import librosa
+        status["libraries"]["librosa"] = "AVAILABLE"
+    except ImportError:
+        status["libraries"]["librosa"] = "MISSING"
+
+    # Test Model
+    if os.path.exists('src/trainedModel.sav'):
+        status["model_file"] = "READY"
 
     # Test MongoDB
     try:
         col = get_users_collection()
         if col is not None:
-            # Simple ping
             _mongo_client.admin.command('ping')
             status["mongodb"] = "CONNECTED"
             status["users_count"] = col.count_documents({})
         else:
-            status["mongodb"] = "NOT_CONFIGURED (URI empty)"
+            status["mongodb"] = "NOT_CONFIGURED"
     except Exception as e:
         status["mongodb"] = f"ERROR: {str(e)}"
 
@@ -493,7 +511,7 @@ def diagnose():
         if ENCRYPTION_KEY:
              status["key_prefix"] = ENCRYPTION_KEY[:4] + "..."
     else:
-        status["encryption"] = "NOT_READY (Invalid format or key missing)"
+        status["encryption"] = "NOT_READY"
 
     return status
 
