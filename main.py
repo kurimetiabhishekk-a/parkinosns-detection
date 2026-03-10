@@ -417,18 +417,33 @@ def upload():
                 return render_template('upload.html', file=f.filename, mgs='File uploaded..!!')
         elif request.form.get('uploadbutton') == 'Detect PD':
             audio_b64 = request.form.get('audio_base64')
+            print(f"DEBUG: Voice analysis requested. b64_len={len(audio_b64) if audio_b64 else 0}")
+            
             if audio_b64 and ',' in audio_b64:
                 import base64
                 header, encoded = audio_b64.split(",", 1)
                 try:
                     with open(os.path.join(savepath, 'test.wav'), 'wb') as f_out:
                         f_out.write(base64.b64decode(encoded))
+                    print("DEBUG: Recorded audio saved from base64.")
                 except Exception as e:
                     print(f"DEBUG: Base64 decode error: {e}")
             elif f and f.filename:
                 f.save(os.path.join(savepath, 'test.wav'))
+                print(f"DEBUG: Audio saved from upload file: {f.filename}")
+            else:
+                print("DEBUG: No audio data provided via base64 or file upload.")
                 
-            voice_result = testVoice()
+            print("DEBUG: Calling testVoice()...")
+            try:
+                voice_result = testVoice()
+                print(f"DEBUG: testVoice() returned: {voice_result}")
+            except Exception as e:
+                print(f"DEBUG: testVoice() CRASHED: {e}")
+                import traceback
+                traceback.print_exc()
+                return render_template('upload.html', mgs="Analysis failed due to a server error.", accuracy=None)
+
             if len(voice_result) == 2:
                 _, msg = voice_result
                 return render_template('upload.html', mgs=msg, accuracy=None)
