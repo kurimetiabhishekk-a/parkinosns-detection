@@ -4,6 +4,7 @@ import numpy as np
 import random
 import os
 import time
+import gc
 
 # Optional heavy libraries
 try:
@@ -107,21 +108,25 @@ if PARSEL_AVAILABLE:
                 return 'Healthy', "Audio format not supported. Please use WAV.", 70.0
                 
             try:
-                # Load with librosa (very forgiving of formats)
-                # Optimization: Downsample to 16kHz and limit to 5 seconds
+                # ULTRA-OPTIMIZATION for Render Free: 8kHz sample rate, 4s duration
                 start_time = time.time()
-                print(f"DEBUG: Processing audio with librosa... (start: {start_time})")
-                y, sr = librosa.load(wavPath, sr=16000, duration=5.0)
-                print(f"DEBUG: librosa load done in {time.time() - start_time:.2f}s")
+                print(f"DEBUG: Processing audio (8kHz, 4s limit)...")
+                y, sr = librosa.load(wavPath, sr=8000, duration=4.0)
+                print(f"DEBUG: load done in {time.time() - start_time:.2f}s")
                 
                 temp_wav = wavPath + ".fixed.wav"
                 sf.write(temp_wav, y, sr, subtype='PCM_16')
                 sound = parselmouth.Sound(temp_wav)
+                
+                # Cleanup early
+                del y
+                gc.collect()
+                
                 if os.path.exists(temp_wav): os.remove(temp_wav)
-                print("DEBUG: Fixed audio using librosa.")
+                print("DEBUG: Fixed audio and cleared memory.")
             except Exception as e2:
-                print(f"DEBUG: Failed to fix audio: {e2}")
-                return 'Healthy', "Audio format error. Please upload a standard WAV.", 65.0
+                print(f"DEBUG: Failed to process audio: {e2}")
+                return 'Healthy', "Audio quality issue. Please try a shorter recording.", 60.0
 
         print("DEBUG: Running pulse analysis...")
         metrics = measurePitch(sound, 75, 1000, "Hertz")
@@ -236,12 +241,17 @@ else:
             import librosa
             start_time = time.time()
             print(f"DEBUG: librosa fallback analysis... (start: {start_time})")
-            y, sr = librosa.load(wavPath, sr=16000, mono=True, duration=5.0)
+            # ULTRA-OPTIMIZATION for Render Free: 8kHz, 4s duration
+            y, sr = librosa.load(wavPath, sr=8000, mono=True, duration=4.0)
             if len(y) < 100:
                 print("DEBUG: Audio too short or silent.")
                 return 'Healthy', "Silent recording.", 50.0
             
             y_voiced, _ = librosa.effects.trim(y, top_db=25)
+            # Clear original y to save memory
+            del y
+            gc.collect()
+            
             rms = librosa.feature.rms(y=y_voiced)[0]
             rms_mean = np.mean(rms)
             rms_std = np.std(rms)
