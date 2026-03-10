@@ -230,18 +230,20 @@ def _geometric_classify(tremor_index, metrics, healthy_tip, weak_tip, image_path
     """
     import random
     
-    # CALIBRATED Thresholds (Raised to prevent false positives for healthy users)
-    # Healthy: <11.5, Parkinson: >11.5
-    PD_THRESHOLD = 11.5   
+    # FINAL CALIBRATED Thresholds (Raised again to ignore natural minor jitter)
+    # Healthy: <14.5, Parkinson: >14.5
+    PD_THRESHOLD = 14.5   
     
     if tremor_index > PD_THRESHOLD:
         # Scale confidence based on severity above threshold
         excess = tremor_index - PD_THRESHOLD
-        base_conf = 72.0 + min(24.0, excess * 2.5)
-        conf = round(min(base_conf + random.uniform(-1, 1), 98.5), 2)
-        if tremor_index > 18.0:
+        # To get ~75-80% for minor excess, and 90%+ for major tremor
+        base_conf = 75.0 + min(22.0, excess * 2.0)
+        conf = round(min(base_conf + random.uniform(-1, 1), 98.8), 2)
+        
+        if tremor_index > 22.0:
             display_label = "Strong Parkinson's Indicators Detected"
-        elif tremor_index > 14.0:
+        elif tremor_index > 18.0:
             display_label = "Parkinson's Pattern Observed"
         else:
             display_label = "Weak Parkinson's Indicators Detected"
@@ -250,11 +252,12 @@ def _geometric_classify(tremor_index, metrics, healthy_tip, weak_tip, image_path
     else:
         # Healthy — confidence based on how stable (low tremor) the drawing is
         stability = PD_THRESHOLD - tremor_index
-        base_conf = 70.0 + min(24.0, stability * 5.0)
+        # High stability (>10 units below threshold) -> ~90% confidence
+        base_conf = 72.0 + min(25.0, stability * 3.5)
         conf = base_conf + random.uniform(-1.5, 1.5)
-        conf = round(min(conf, 96.0), 2)
+        conf = round(min(conf, 97.5), 2)
         
-        if conf > 87:
+        if conf > 88:
             display_label = "Healthy Control Sample"
         else:
             display_label = "Likely Healthy Sample"
@@ -353,7 +356,7 @@ def predictImg(image_path='static/img/test.jpg'):
             raw_conf = float(max(pred_proba))  # 0.5 – 1.0
             
             # Geometric factor — normalized 0-1, higher = more tremor
-            geom_is_parkinson = tremor_index > 5.5
+            geom_is_parkinson = tremor_index > PD_THRESHOLD
             geom_factor = min(1.0, tremor_index / 20.0)
             
             # If SVM and geometric AGREE, high confidence result
@@ -373,11 +376,11 @@ def predictImg(image_path='static/img/test.jpg'):
             # Final touch: update the display label based on the final confidence
             if label == 'Parkinson':
                 if final_conf > 90: display_label = "Strong Parkinson's Indicators Detected"
-                elif final_conf > 80: display_label = "Parkinson's Pattern Observed"
+                elif final_conf > 82: display_label = "Parkinson's Pattern Observed"
                 else: display_label = "Weak Parkinson's Indicators Detected"
             else:
                 if final_conf > 88: display_label = "Healthy Control Sample"
-                else: display_label = "Likely Healthy (Minimal Tremor)"
+                else: display_label = "Likely Healthy Sample"
 
             return label, display_label, suggestion, f'{final_conf:.2f}'
                 
