@@ -21,8 +21,8 @@ _base = os.path.dirname(os.path.abspath(__file__))
 
 # ── GLOBAL CALIBRATION THRESHOLDS ─────────────────────────────────────────────
 # Drawing: Tremor index > PD_THRESHOLD is flagged as Parkinson's.
-# Lower = more sensitive. Calibrated to catch weak/shaky patterns.
-PD_THRESHOLD = 8.0
+# 13.0 is the sweet spot separating natural messy mouse jitter (10.0-11.0) from actual Parkinson's tremor (18.0+)
+PD_THRESHOLD = 13.0
 DIGITAL_BOOST = 1.5   # Extra "stability" given to digital drawings (mouse/touch)
 _feat_model  = None
 _feat_scaler = None
