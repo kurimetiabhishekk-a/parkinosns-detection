@@ -240,14 +240,13 @@ def _geometric_classify(tremor_index, metrics, healthy_tip, weak_tip, image_path
         base_conf = 68.0 + min(28.0, excess * 3.5)
         conf = base_conf + random.uniform(-1.5, 1.5)
         conf = round(min(conf, 97.5), 2)
-        
-        if conf > 88:
+        if tremor_index > 14.0:
             display_label = "Strong Parkinson's Indicators Detected"
-        elif conf > 78:
+        elif tremor_index > 9.0:
             display_label = "Parkinson's Pattern Observed"
         else:
             display_label = "Weak Parkinson's Indicators Detected"
-        
+            
         return 'Parkinson', display_label, weak_tip, f'{conf:.2f}'
     else:
         # Healthy — confidence based on how stable (low tremor) the drawing is
@@ -325,18 +324,16 @@ def predictImg(image_path='static/img/test.jpg'):
 
     print(f"DEBUG: tremor_index={tremor_index:.3f}, is_digital_canvas={is_digital_canvas}, metrics={metrics}")
 
-    # ── Strategy: Geometric is ALWAYS primary ─────────────────────────────────
-    # For canvas drawings, use geometric-only (SVM trained on different data)
-    # For photo uploads, combine SVM + geometric for better accuracy
+    # ── Strategy: PHYSICS-BASED GEOMETRIC ANALYSIS IS PRINCIPAL ────────────────
+    # To fix "same result" issues, we must trust the direct measurement of 
+    # hand stability (shakiness) and line precision.
     
-    if is_digital_canvas:
-        # Pure geometric decision for canvas drawings
-        print("DEBUG: Canvas drawing — using geometric tremor analysis as primary.")
-        return _geometric_classify(tremor_index, metrics, healthy_tip, weak_tip, image_path)
-    
-    # ── For photo uploads: Try SVM but validate against geometric ─────────────
-    if _feat_model is not None and _feat_scaler is not None:
-        print("DEBUG: Photo upload — using SVM + geometric for analysis...")
+    # 1. Use the geometric decision as the absolute baseline
+    label, display_label, suggestion, base_conf_str = _geometric_classify(tremor_index, metrics, healthy_tip, weak_tip, image_path)
+    base_conf = float(base_conf_str)
+
+    # 2. Refine with SVM model ONLY if it's a photo, and only to adjust confidence
+    if not is_digital_canvas and _feat_model is not None and _feat_scaler is not None:
         try:
             from skimage.feature import hog, local_binary_pattern
             from skimage.transform import resize
@@ -363,31 +360,27 @@ def predictImg(image_path='static/img/test.jpg'):
             # If SVM and geometric AGREE, high confidence result
             # If they DISAGREE, trust geometric (more reliable on real input)
             svm_is_parkinson = (pred_label_idx == 1)
+            raw_conf = float(max(pred_proba))
             
-            if svm_is_parkinson == geom_is_parkinson:
-                # Agreement — use SVM confidence boosted by geometric
-                if svm_is_parkinson:
-                    confidence = round(70.0 + (raw_conf * 20.0) + (geom_factor * 8.0), 2)
-                    import random; confidence += random.uniform(-1, 1)
-                    if confidence > 90:
-                        display_label = "Strong Parkinson's Indicators Detected"
-                    elif confidence > 82:
-                        display_label = "Parkinson's Pattern Observed"
-                    else:
-                        display_label = "Weak Parkinson's Indicators Detected"
-                    return 'Parkinson', display_label, weak_tip, f'{min(confidence, 99.1):.2f}'
-                else:
-                    confidence = round(70.0 + (raw_conf * 20.0) - (geom_factor * 8.0), 2)
-                    import random; confidence += random.uniform(-1, 1)
-                    if confidence > 88:
-                        display_label = 'Healthy Control Sample'
-                    else:
-                        display_label = 'Likely Healthy Sample'
-                    return 'Healthy', display_label, healthy_tip, f'{max(confidence, 65.0):.2f}'
+            # Adjust the geometric confidence based on SVM agreement
+            # We don't change the 'label', just the 'confidence' and 'display_label'
+            if (label == 'Parkinson') == svm_is_parkinson:
+                # Agreement: boost confidence
+                final_conf = min(99.0, base_conf + (raw_conf * 5.0))
             else:
-                # Disagreement — trust geometric analysis
-                print(f"DEBUG: SVM and geometric disagree. Trusting geometric (tremor={tremor_index:.2f})")
-                return _geometric_classify(tremor_index, metrics, healthy_tip, weak_tip, image_path)
+                # Disagreement: lower confidence because models are split
+                final_conf = max(65.0, base_conf - (raw_conf * 10.0))
+            
+            # Final touch: update the display label based on the final confidence
+            if label == 'Parkinson':
+                if final_conf > 90: display_label = "Strong Parkinson's Indicators Detected"
+                elif final_conf > 80: display_label = "Parkinson's Pattern Observed"
+                else: display_label = "Weak Parkinson's Indicators Detected"
+            else:
+                if final_conf > 88: display_label = "Healthy Control Sample"
+                else: display_label = "Likely Healthy (Minimal Tremor)"
+
+            return label, display_label, suggestion, f'{final_conf:.2f}'
                 
         except Exception as e:
             print(f"DEBUG: Feature model prediction error: {e}")
