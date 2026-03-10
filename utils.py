@@ -384,43 +384,38 @@ def predictImg(image_path='static/img/test.jpg'):
         except Exception as e:
             print(f"DEBUG: Feature model prediction error: {e}")
 
-    # ── Step 3: Keras CNN fallback ─────────────────────────────────────────────
-    if model is not None:
-        from PIL import ImageOps
-        size = (224, 224)
+    # 3. Keras CNN refinement (ONLY if results are still uncertain or it's a photo)
+    if not is_digital_canvas and model is not None:
         try:
-            resample = image_raw.ANTIALIAS
-        except AttributeError:
-            from PIL import Image as _PIL
-            resample = _PIL.Resampling.LANCZOS
+            from PIL import ImageOps
+            size = (224, 224)
+            try:
+                resample = image_raw.ANTIALIAS
+            except AttributeError:
+                from PIL import Image as _PIL
+                resample = _PIL.Resampling.LANCZOS
 
-        img_resized = ImageOps.fit(image_raw, size, resample)
-        img_arr = np.asarray(img_resized, dtype=np.float32)
-        data[0] = (img_arr / 127.0) - 1
-        prediction = model.predict(data)
-        cnn_confidence = float(np.max(prediction)) * 100
-        idx = int(np.argmax(prediction))
-        labels_map = {0: 'Healthy', 1: 'Parkinson'}
-        lpath = os.path.join(_base, 'labels.txt')
-        if os.path.exists(lpath):
-            with open(lpath) as lf:
-                for line in lf:
-                    parts = line.strip().split(None, 1)
-                    if len(parts) == 2:
-                        labels_map[int(parts[0])] = parts[1]
-        label = labels_map.get(idx, 'Healthy')
-        
-        if label == 'Parkinson':
-            if cnn_confidence > 90:
-                display_label = "Strong Parkinson's Indicators"
-            elif cnn_confidence > 75:
-                display_label = "Parkinson's Pattern"
+            img_resized = ImageOps.fit(image_raw, size, resample)
+            img_arr = np.asarray(img_resized, dtype=np.float32)
+            data[0] = (img_arr / 127.0) - 1
+            prediction = model.predict(data)
+            cnn_confidence = float(np.max(prediction)) * 100
+            idx = int(np.argmax(prediction))
+            cnn_label = 'Parkinson' if idx == 1 else 'Healthy'
+            
+            # If CNN agrees with geometric, boost confidence
+            if cnn_label == label:
+                base_conf = float(base_conf_str)
+                final_conf = min(99.0, base_conf + 5.0)
+                return label, display_label, suggestion, f'{final_conf:.2f}'
+            # If they disagree, trust geometric but show lower confidence
             else:
-                display_label = "Weak Parkinson's indicators"
-            return 'Parkinson', display_label, weak_tip, f'{cnn_confidence:.2f}'
-        else:
-            return 'Healthy', 'Healthy Drawing Sample', healthy_tip, f'{cnn_confidence:.2f}'
+                base_conf = float(base_conf_str)
+                final_conf = max(60.0, base_conf - 10.0)
+                return label, display_label, suggestion, f'{final_conf:.2f}'
 
-    # ── Step 4: Pure geometric fallback ──────────────────────────────────────
-    print("DEBUG: Using Geometric fallback for drawing analysis...")
-    return _geometric_classify(tremor_index, metrics, healthy_tip, weak_tip, image_path)
+        except Exception as e:
+            print(f"DEBUG: Keras refinement error: {e}")
+
+    # Return the pure geometric result if no ML refinements applied
+    return label, display_label, suggestion, base_conf_str
