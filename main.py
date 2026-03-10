@@ -493,6 +493,12 @@ def diagnose():
     if os.path.exists('src/trainedModel.sav'):
         status["model_file"] = "READY"
 
+    # Test Uploads
+    if os.path.exists('upload/test.wav'):
+        status["test_wav_size"] = f"{os.path.getsize('upload/test.wav') / 1024:.1f} KB"
+    else:
+        status["test_wav_size"] = "MISSING"
+
     # Test MongoDB
     try:
         col = get_users_collection()
