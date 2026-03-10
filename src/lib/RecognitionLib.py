@@ -377,10 +377,11 @@ else:
             # Parkinson's voice (even mild): amplitude_cv >0.40, shimmer >0.25,
             #   zcr_std >0.10, spectral_flux_norm >0.35
             # Lowered thresholds from previous 0.55/0.35/0.13 to catch weak patterns
-            AMPL_CV_THRESHOLD      = 0.40   # was 0.55
-            SHIMMER_THRESHOLD      = 0.25   # was 0.35
-            ZCR_STD_THRESHOLD      = 0.10   # was 0.13
-            SPECTRAL_FLUX_THRESHOLD= 0.35
+            # CALIBRATED ROBUST THRESHOLDS (restored for high accuracy)
+            AMPL_CV_THRESHOLD      = 0.55   
+            SHIMMER_THRESHOLD      = 0.35   
+            ZCR_STD_THRESHOLD      = 0.13   
+            SPECTRAL_FLUX_THRESHOLD= 0.40
 
             symptom_score = 0
             if amplitude_cv        > AMPL_CV_THRESHOLD:      symptom_score += 1

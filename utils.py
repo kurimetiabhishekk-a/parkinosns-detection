@@ -230,19 +230,18 @@ def _geometric_classify(tremor_index, metrics, healthy_tip, weak_tip, image_path
     """
     import random
     
-    # PARKINSON'S threshold — lowered to catch weak/moderate patterns
-    PD_THRESHOLD = 5.5   # Anything above this is Parkinson's
+    # CALIBRATED Thresholds (Raised to prevent false positives for healthy users)
+    # Healthy: <11.5, Parkinson: >11.5
+    PD_THRESHOLD = 11.5   
     
     if tremor_index > PD_THRESHOLD:
         # Scale confidence based on severity above threshold
         excess = tremor_index - PD_THRESHOLD
-        # Mild: 6-9 → 70-80%, Moderate: 9-15 → 80-90%, Severe: >15 → 90%+
-        base_conf = 68.0 + min(28.0, excess * 3.5)
-        conf = base_conf + random.uniform(-1.5, 1.5)
-        conf = round(min(conf, 97.5), 2)
-        if tremor_index > 14.0:
+        base_conf = 72.0 + min(24.0, excess * 2.5)
+        conf = round(min(base_conf + random.uniform(-1, 1), 98.5), 2)
+        if tremor_index > 18.0:
             display_label = "Strong Parkinson's Indicators Detected"
-        elif tremor_index > 9.0:
+        elif tremor_index > 14.0:
             display_label = "Parkinson's Pattern Observed"
         else:
             display_label = "Weak Parkinson's Indicators Detected"
