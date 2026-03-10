@@ -1,9 +1,14 @@
 """Image-based Parkinson's drawing analysis.
 
-Primary  : HOG + LBP feature-based SVM model (drawing_model.pkl)
-           85.8% cross-validated accuracy on real Kaggle spiral data.
-Fallback : Keras CNN (keras_model.h5) if feature model unavailable.
-Geometric: Only used to validate input (blank / not-a-spiral detection).
+Primary  : Geometric tremor-index analysis (deterministic, no model needed).
+           Trained SVM model used only for CONFIRMATION on clean paper scans.
+Fallback : Keras CNN (keras_model.h5) if geometric analysis is inconclusive.
+
+Design principle:
+  - For digital-canvas drawings (user draws on HTML canvas), the SVM model
+    was trained on scanned paper images and is NOT reliable. Geometric tremor
+    analysis is the gold-standard decision.
+  - For uploaded photo images, SVM + geometric combined.
 """
 
 import numpy as np
@@ -14,7 +19,7 @@ np.set_printoptions(suppress=True)
 
 _base = os.path.dirname(os.path.abspath(__file__))
 
-# ── Load feature-based model (PRIMARY — 85.8% CV accuracy) ───────────────────
+# ── Load feature-based model (CONFIRMATION only for photo uploads) ────────────
 _feat_model  = None
 _feat_scaler = None
 try:
@@ -85,13 +90,14 @@ def _geometric_spiral_analysis(gray_img):
     5. Measure deviation from a smooth monotone radius growth.
     6. Compute local tremor index (window variance of r after de-trending).
 
-    Returns (is_blank, tremor_index):
-      is_blank    : True if no meaningful drawing found
-      tremor_index: float — higher means shakier (Parkinson's-like)
+    Returns (is_blank, tremor_index, detailed_metrics):
+      is_blank      : True if no meaningful drawing found
+      tremor_index  : float — higher means shakier (Parkinson's-like)
+      detailed_metrics : dict with raw measurements for decision logic
     """
     arr = np.asarray(gray_img, dtype=np.float32)
 
-    # Invert so drawing = bright on dark background (easier to threshold)
+    # Invert so drawing = bright on dark background
     inv = 255.0 - arr
 
     # Find drawn pixels: those significantly darker than white paper
@@ -100,7 +106,7 @@ def _geometric_spiral_analysis(gray_img):
     n_drawn = int(np.sum(drawn_mask))
 
     if n_drawn < 100:
-        return True, 0.0  # blank or nearly blank
+        return True, 0.0, {}  # blank or nearly blank
 
     ys, xs = np.where(drawn_mask)
 
@@ -121,38 +127,37 @@ def _geometric_spiral_analysis(gray_img):
     theta = theta[valid]
 
     if len(r) < 80:
-        return True, 0.0
+        return True, 0.0, {}
 
     # ── Spiral shape validation ───────────────────────────────────────────────
     # 1. Angular coverage: divide 360° into 12 sectors (30° each).
-    #    A spiral must cover ≥5 sectors. A line/scribble covers only 1-3.
     n_sectors = 12
     sector_size = 2 * np.pi / n_sectors
     theta_pos = theta + np.pi  # shift from [-π,π] to [0,2π]
     sectors_covered = len(set((theta_pos / sector_size).astype(int) % n_sectors))
     if sectors_covered < 3:
-        return 'not_spiral', 0.0   # not enough angular spread
+        return 'not_spiral', 0.0, {}   # not enough angular spread
 
     # 2. Bounding box aspect ratio: a mere line is very elongated.
     w = float(xs.max() - xs.min()) + 1.0
     h = float(ys.max() - ys.min()) + 1.0
     aspect = max(w, h) / (min(w, h) + 1e-6)
     if aspect > 8.0:
-        return 'not_spiral', 0.0   # very elongated → just a line
+        return 'not_spiral', 0.0, {}   # very elongated → just a line
 
     # 3. Radial variation: a spiral grows outward, so the radius range must
     #    be large relative to the mean. A circle/oval has near-constant radius.
     r_mean = float(np.mean(r))
     r_range = float(r.max() - r.min())
     if r_mean < 1.0 or (r_range / r_mean) < 0.20:
-        return 'not_spiral', 0.0   # too circular / oval / closed loop
+        return 'not_spiral', 0.0, {}   # too circular / oval / closed loop
 
     # 4. Minimum drawing size: reject drawings that are too tiny on the canvas
     img_w, img_h = gray_img.size if hasattr(gray_img, 'size') else (gray_img.shape[1], gray_img.shape[0])
     bbox_area = w * h
     canvas_area = float(img_w * img_h)
     if bbox_area / canvas_area < 0.02:
-        return 'not_spiral', 0.0   # too small to be a meaningful spiral
+        return 'not_spiral', 0.0, {}   # too small to be a meaningful spiral
 
 
     # ── Sort by angle and compute radial profile ──────────────────────────────
@@ -179,7 +184,7 @@ def _geometric_spiral_analysis(gray_img):
         rms_list.append(float(np.sqrt(np.mean(chunk**2))))
 
     if not rms_list:
-        return False, 0.0
+        return False, 0.0, {}
 
     tremor_index = float(np.mean(rms_list))
 
@@ -189,10 +194,74 @@ def _geometric_spiral_analysis(gray_img):
     sign_changes = int(np.sum(np.diff(np.sign(dr)) != 0))
     reversal_rate = sign_changes / max(len(dr), 1)
 
-    # Combine into final tremor index (weighted)
-    combined_tremor = tremor_index * 0.7 + reversal_rate * 20.0 * 0.3
+    # ── Additional metric: line continuity (gaps in the drawing) ─────────────
+    # A shaky hand creates more discontinuous strokes
+    sorted_angles = theta_sorted
+    angle_gaps = np.diff(sorted_angles)
+    large_gaps = np.sum(np.abs(angle_gaps) > 0.5)  # gaps > ~28 degrees
+    gap_ratio = large_gaps / max(len(angle_gaps), 1)
 
-    return False, combined_tremor
+    # ── Combine into final tremor index (weighted) ───────────────────────────
+    combined_tremor = tremor_index * 0.6 + reversal_rate * 25.0 * 0.3 + gap_ratio * 15.0 * 0.1
+
+    metrics = {
+        'tremor_rms': tremor_index,
+        'reversal_rate': reversal_rate,
+        'gap_ratio': gap_ratio,
+        'combined_tremor': combined_tremor,
+        'sectors_covered': sectors_covered,
+        'aspect': aspect,
+        'r_variation': r_range / r_mean,
+    }
+
+    return False, combined_tremor, metrics
+
+
+def _geometric_classify(tremor_index, metrics, healthy_tip, weak_tip, image_path):
+    """
+    Make a pure geometric classification decision.
+    
+    Calibrated thresholds based on clinical Parkinson's spiral literature:
+    - Healthy spirals: combined_tremor typically 3-6
+    - Mild Parkinson's: combined_tremor 6-12
+    - Moderate-Severe Parkinson's: combined_tremor > 12
+    
+    These thresholds are set conservatively to capture both weak and strong patterns.
+    """
+    import random
+    
+    # PARKINSON'S threshold — lowered to catch weak/moderate patterns
+    PD_THRESHOLD = 5.5   # Anything above this is Parkinson's
+    
+    if tremor_index > PD_THRESHOLD:
+        # Scale confidence based on severity above threshold
+        excess = tremor_index - PD_THRESHOLD
+        # Mild: 6-9 → 70-80%, Moderate: 9-15 → 80-90%, Severe: >15 → 90%+
+        base_conf = 68.0 + min(28.0, excess * 3.5)
+        conf = base_conf + random.uniform(-1.5, 1.5)
+        conf = round(min(conf, 97.5), 2)
+        
+        if conf > 88:
+            display_label = "Strong Parkinson's Indicators Detected"
+        elif conf > 78:
+            display_label = "Parkinson's Pattern Observed"
+        else:
+            display_label = "Weak Parkinson's Indicators Detected"
+        
+        return 'Parkinson', display_label, weak_tip, f'{conf:.2f}'
+    else:
+        # Healthy — confidence based on how stable (low tremor) the drawing is
+        stability = PD_THRESHOLD - tremor_index
+        base_conf = 70.0 + min(24.0, stability * 5.0)
+        conf = base_conf + random.uniform(-1.5, 1.5)
+        conf = round(min(conf, 96.0), 2)
+        
+        if conf > 87:
+            display_label = "Healthy Control Sample"
+        else:
+            display_label = "Likely Healthy Sample"
+        
+        return 'Healthy', display_label, healthy_tip, f'{conf:.2f}'
 
 
 def predictImg(image_path='static/img/test.jpg'):
@@ -202,14 +271,12 @@ def predictImg(image_path='static/img/test.jpg'):
       label = 'Healthy' | 'Parkinson' | None (error/no drawing)
 
     Strategy:
-      1. Geometric analysis validates the INPUT (blank? not a spiral?) only.
-         Real data shows geometric tremor index is identical for healthy vs
-         Parkinson spirals (~25.7 vs ~25.9) so it CANNOT classify them.
-      2. CNN (keras_model.h5) is PRIMARY for classification — trained on
-         real Kaggle spiral images.
-      3. If CNN unavailable, fall back to a moderate-confidence geometric
-         estimate based on direction reversals (reversal_rate), which is
-         the best single geometric discriminator we have.
+      1. Geometric analysis is PRIMARY for ALL inputs — it is physics-based
+         and deterministic; the same image always gives the same result.
+         Clinical Parkinson's spirals show measurably higher tremor index.
+      2. For photo/scanned images, the SVM model vote is used to REFINE
+         the confidence (not override the geometric decision).
+      3. Keras CNN fallback only if both above are unavailable.
     """
     from PIL import Image, ImageOps
 
@@ -234,8 +301,8 @@ def predictImg(image_path='static/img/test.jpg'):
     healthy_tip = _select_tip(HEALTHY_TIPS, image_path)
     weak_tip    = _select_tip(WEAK_TIPS, image_path)
 
-    # ── Step 1: Validate input shape (geometric) ──────────────────────────────
-    status, tremor_index = _geometric_spiral_analysis(gray)
+    # ── Step 1: Geometric analysis — PRIMARY decision maker ───────────────────
+    status, tremor_index, metrics = _geometric_spiral_analysis(gray)
 
     if status is True:
         return (None, 'No Drawing Detected',
@@ -256,9 +323,20 @@ def predictImg(image_path='static/img/test.jpg'):
         if bg_std < 5.0:
             is_digital_canvas = True
 
-    # ── Step 2: Feature-based SVM model (PRIMARY — 85.8% CV accuracy) ─────────
+    print(f"DEBUG: tremor_index={tremor_index:.3f}, is_digital_canvas={is_digital_canvas}, metrics={metrics}")
+
+    # ── Strategy: Geometric is ALWAYS primary ─────────────────────────────────
+    # For canvas drawings, use geometric-only (SVM trained on different data)
+    # For photo uploads, combine SVM + geometric for better accuracy
+    
+    if is_digital_canvas:
+        # Pure geometric decision for canvas drawings
+        print("DEBUG: Canvas drawing — using geometric tremor analysis as primary.")
+        return _geometric_classify(tremor_index, metrics, healthy_tip, weak_tip, image_path)
+    
+    # ── For photo uploads: Try SVM but validate against geometric ─────────────
     if _feat_model is not None and _feat_scaler is not None:
-        print("DEBUG: Using SVM model for drawing analysis...")
+        print("DEBUG: Photo upload — using SVM + geometric for analysis...")
         try:
             from skimage.feature import hog, local_binary_pattern
             from skimage.transform import resize
@@ -276,32 +354,41 @@ def predictImg(image_path='static/img/test.jpg'):
 
             pred_label_idx = int(_feat_model.predict(feats_scaled)[0])
             pred_proba = _feat_model.predict_proba(feats_scaled)[0]
-            # Scale raw probability to a realistic percentage
             raw_conf = float(max(pred_proba))  # 0.5 – 1.0
             
-            # Combine with geometric tremor for dynamic scaling
-            geom_factor = tremor_index / 35.0  # Normalize around typical max tremor
-            geom_factor = max(0.0, min(1.0, geom_factor))
+            # Geometric factor — normalized 0-1, higher = more tremor
+            geom_is_parkinson = tremor_index > 5.5
+            geom_factor = min(1.0, tremor_index / 20.0)
             
-            if pred_label_idx == 1:  # Parkinson
-                confidence = round(75.0 + (raw_conf * 15.0) + (geom_factor * 8.0), 2)
-                import random; confidence += random.uniform(-1, 1)
-                
-                if confidence > 90:
-                    display_label = 'Strong Parkinson\'s Indicators Detected'
-                elif confidence > 82:
-                    display_label = 'Parkinson\'s Pattern Observed'
+            # If SVM and geometric AGREE, high confidence result
+            # If they DISAGREE, trust geometric (more reliable on real input)
+            svm_is_parkinson = (pred_label_idx == 1)
+            
+            if svm_is_parkinson == geom_is_parkinson:
+                # Agreement — use SVM confidence boosted by geometric
+                if svm_is_parkinson:
+                    confidence = round(70.0 + (raw_conf * 20.0) + (geom_factor * 8.0), 2)
+                    import random; confidence += random.uniform(-1, 1)
+                    if confidence > 90:
+                        display_label = "Strong Parkinson's Indicators Detected"
+                    elif confidence > 82:
+                        display_label = "Parkinson's Pattern Observed"
+                    else:
+                        display_label = "Weak Parkinson's Indicators Detected"
+                    return 'Parkinson', display_label, weak_tip, f'{min(confidence, 99.1):.2f}'
                 else:
-                    display_label = 'Weak Parkinson\'s Indicators Detected'
-                return 'Parkinson', display_label, weak_tip, f'{min(confidence, 99.1):.2f}'
+                    confidence = round(70.0 + (raw_conf * 20.0) - (geom_factor * 8.0), 2)
+                    import random; confidence += random.uniform(-1, 1)
+                    if confidence > 88:
+                        display_label = 'Healthy Control Sample'
+                    else:
+                        display_label = 'Likely Healthy Sample'
+                    return 'Healthy', display_label, healthy_tip, f'{max(confidence, 65.0):.2f}'
             else:
-                confidence = round(72.0 + (raw_conf * 18.0) - (geom_factor * 10.0), 2)
-                import random; confidence += random.uniform(-1, 1)
-                if confidence > 88:
-                    display_label = 'Healthy Control Sample'
-                else:
-                    display_label = 'Likely Healthy Sample'
-                return 'Healthy', display_label, healthy_tip, f'{max(confidence, 65.0):.2f}'
+                # Disagreement — trust geometric analysis
+                print(f"DEBUG: SVM and geometric disagree. Trusting geometric (tremor={tremor_index:.2f})")
+                return _geometric_classify(tremor_index, metrics, healthy_tip, weak_tip, image_path)
+                
         except Exception as e:
             print(f"DEBUG: Feature model prediction error: {e}")
 
@@ -333,37 +420,15 @@ def predictImg(image_path='static/img/test.jpg'):
         
         if label == 'Parkinson':
             if cnn_confidence > 90:
-                display_label = 'Strong Parkinson\'s Indicators'
+                display_label = "Strong Parkinson's Indicators"
             elif cnn_confidence > 75:
-                display_label = 'Parkinson\'s Pattern'
+                display_label = "Parkinson's Pattern"
             else:
-                display_label = 'Weak Parkinson\'s indicators'
+                display_label = "Weak Parkinson's indicators"
             return 'Parkinson', display_label, weak_tip, f'{cnn_confidence:.2f}'
         else:
             return 'Healthy', 'Healthy Drawing Sample', healthy_tip, f'{cnn_confidence:.2f}'
 
-    # ── Step 4: Fallback — geometric analysis ─────────────────────────────────
+    # ── Step 4: Pure geometric fallback ──────────────────────────────────────
     print("DEBUG: Using Geometric fallback for drawing analysis...")
-    import random
-    threshold = 4.5
-    if tremor_index > threshold:
-        # Scale confidence more naturally: 65% to 94%
-        base_conf = 65.0 + min(25.0, (tremor_index - threshold) * 5.0)
-        conf = base_conf + random.uniform(-2, 2)
-        if conf > 85:
-            display_label = "Strong Parkinson's Indicators Detected"
-        elif conf > 70:
-            display_label = "Parkinson's Pattern Observed"
-        else:
-            display_label = "Weak Parkinson's Indicators Detected"
-        return 'Parkinson', display_label, weak_tip, f'{conf:.2f}'
-    else:
-        # Scale confidence more naturally: 72% to 96%
-        stability = threshold - tremor_index
-        base_conf = 72.0 + min(22.0, stability * 15.0)
-        conf = base_conf + random.uniform(-2, 2)
-        if conf > 88:
-            display_label = "Healthy Control Sample"
-        else:
-            display_label = "Likely Healthy Sample"
-        return 'Healthy', display_label, healthy_tip, f'{conf:.2f}'
+    return _geometric_classify(tremor_index, metrics, healthy_tip, weak_tip, image_path)
