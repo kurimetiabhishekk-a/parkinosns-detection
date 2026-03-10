@@ -731,6 +731,13 @@
 
 			// Show loading state
 			if (e.submitter && e.submitter.value === 'Detect PD') {
+				// Inject a hidden input to carry the submitter's name/value across since disabling it will strip it from the POST body
+				const hiddenAction = document.createElement('input');
+				hiddenAction.type = 'hidden';
+				hiddenAction.name = 'uploadbutton';
+				hiddenAction.value = 'Detect PD';
+				voiceForm.appendChild(hiddenAction);
+
 				e.submitter.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analysing...';
 				e.submitter.disabled = true;
 				// Show overlay
