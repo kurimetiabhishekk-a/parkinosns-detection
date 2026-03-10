@@ -98,35 +98,55 @@ if PARSEL_AVAILABLE:
             return (np.nan,) * 16
 
     def predict(clf, wavPath):
-        """Primary voice prediction using RandomForest or heuristics."""
-        try:
-            print(f"DEBUG: Loading audio from {wavPath}")
-            sound = parselmouth.Sound(wavPath)
-        except Exception as e:
-            print(f"DEBUG: Parselmouth failed to load audio directly: {e}")
-            if not LIBROSA_AVAILABLE:
-                return 'Healthy', "Audio format not supported. Please use WAV.", 70.0
-                
+        """Primary voice prediction using RandomForest or heuristics.
+        
+        Always pre-processes through librosa first to handle any audio format
+        (webm, opus, mp4, ogg, wav, etc.) that the browser MediaRecorder may produce.
+        """
+        temp_wav = wavPath + ".fixed.wav"
+        sound = None
+
+        # ── Step 1: Convert to clean 16kHz mono PCM WAV via librosa ──────────
+        if LIBROSA_AVAILABLE:
             try:
-                # Increased duration to 10 seconds for better analysis
                 start_time = time.time()
-                print(f"DEBUG: Processing audio (8kHz, 10s limit)...")
-                y, sr = librosa.load(wavPath, sr=8000, duration=10.0)
-                print(f"DEBUG: load done in {time.time() - start_time:.2f}s")
-                
-                temp_wav = wavPath + ".fixed.wav"
+                print(f"DEBUG: Pre-processing audio via librosa (16kHz, 10s max)...")
+                # Use 16kHz — better pitch extraction than 8kHz
+                y, sr = librosa.load(wavPath, sr=16000, mono=True, duration=10.0)
+                print(f"DEBUG: librosa load done in {time.time() - start_time:.2f}s, samples={len(y)}")
+
+                if len(y) < 1600:  # less than 0.1s at 16kHz
+                    print("DEBUG: Audio too short after load.")
+                    return 'Healthy', "Recording too short. Please record at least 3 seconds of sound.", 50.0
+
                 sf.write(temp_wav, y, sr, subtype='PCM_16')
-                sound = parselmouth.Sound(temp_wav)
-                
-                # Cleanup early
                 del y
                 gc.collect()
-                
-                if os.path.exists(temp_wav): os.remove(temp_wav)
-                print("DEBUG: Fixed audio and cleared memory.")
-            except Exception as e2:
-                print(f"DEBUG: Failed to process audio: {e2}")
-                return 'Healthy', "Audio quality issue. Please try a shorter recording.", 60.0
+                print(f"DEBUG: Written converted WAV to {temp_wav}")
+            except Exception as e:
+                print(f"DEBUG: librosa pre-processing failed: {e}")
+                temp_wav = None  # fall back to original file
+
+        # ── Step 2: Load into parselmouth ─────────────────────────────────────
+        try:
+            load_path = temp_wav if (temp_wav and os.path.exists(temp_wav)) else wavPath
+            print(f"DEBUG: Loading into parselmouth from {load_path}")
+            sound = parselmouth.Sound(load_path)
+        except Exception as e:
+            print(f"DEBUG: Parselmouth failed to load audio: {e}")
+            if temp_wav and os.path.exists(temp_wav):
+                try:
+                    os.remove(temp_wav)
+                except:
+                    pass
+            return 'Healthy', "Could not read audio. Please upload a .WAV file or re-record.", 60.0
+        finally:
+            # Always clean up temp file whether parselmouth succeeded or not
+            if temp_wav and os.path.exists(temp_wav):
+                try:
+                    os.remove(temp_wav)
+                except:
+                    pass
 
         print("DEBUG: Running pulse analysis...")
         metrics = measurePitch(sound, 75, 1000, "Hertz")

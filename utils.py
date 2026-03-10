@@ -20,11 +20,10 @@ np.set_printoptions(suppress=True)
 _base = os.path.dirname(os.path.abspath(__file__))
 
 # ── GLOBAL CALIBRATION THRESHOLDS ─────────────────────────────────────────────
-# Set conservatively to prevent false positives on healthy individuals.
-# Drawing: Tremor index > 20.0 is flagged as Parkinson's.
-# Voice: At least 2-3 significant markers must be elevated.
-PD_THRESHOLD = 18.0
-DIGITAL_BOOST = 5.0   # Extra "stability" given to digital drawings (mouse/touch)
+# Drawing: Tremor index > PD_THRESHOLD is flagged as Parkinson's.
+# Lower = more sensitive. Calibrated to catch weak/shaky patterns.
+PD_THRESHOLD = 8.0
+DIGITAL_BOOST = 1.5   # Extra "stability" given to digital drawings (mouse/touch)
 _feat_model  = None
 _feat_scaler = None
 try:
@@ -246,9 +245,9 @@ def _geometric_classify(tremor_index, metrics, healthy_tip, weak_tip, image_path
         base_conf = 75.0 + min(22.0, excess * 2.0)
         conf = round(min(base_conf + random.uniform(-1, 1), 98.8), 2)
         
-        if tremor_index > 22.0:
+        if tremor_index > 16.0:
             display_label = "Strong Parkinson's Indicators Detected"
-        elif tremor_index > 18.0:
+        elif tremor_index > 11.0:
             display_label = "Parkinson's Pattern Observed"
         else:
             display_label = "Weak Parkinson's Indicators Detected"
@@ -329,8 +328,6 @@ def predictImg(image_path='static/img/test.jpg'):
         if bg_std < 5.0:
             is_digital_canvas = True
 
-    print(f"DEBUG: tremor_index={tremor_index:.3f}, is_digital_canvas={is_digital_canvas}, metrics={metrics}")
-
     # ── Strategy: PHYSICS-BASED GEOMETRIC ANALYSIS IS PRINCIPAL ────────────────
     # To fix "same result" issues, we must trust the direct measurement of 
     # hand stability (shakiness) and line precision.
@@ -339,6 +336,8 @@ def predictImg(image_path='static/img/test.jpg'):
     # Applied Digital Boost: If it's a digital canvas, we are MORE lenient 
     # because mouse/touch drawing is naturally more jittery than a pencil.
     effective_tremor = tremor_index - (DIGITAL_BOOST if is_digital_canvas else 0.0)
+
+    print(f"DEBUG: tremor_index={tremor_index:.3f}, effective_tremor={effective_tremor:.3f}, is_digital_canvas={is_digital_canvas}, metrics={metrics}")
     
     label, display_label, suggestion, base_conf_str = _geometric_classify(effective_tremor, metrics, healthy_tip, weak_tip, image_path)
     base_conf = float(base_conf_str)
