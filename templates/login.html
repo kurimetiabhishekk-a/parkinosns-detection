@@ -85,10 +85,6 @@
         .left-text p {
             position: relative;
             z-index: 10;
-            font-size: 0.82rem;
-            color: rgba(255, 255, 255, 0.5);
-            line-height: 1.65;
-            max-width: 320px;
         }
 
         /* ──────────────────────────────────────────
@@ -125,13 +121,12 @@
 
             0%,
             100% {
-                opacity: 0;
-                transform: translateY(10px);
-                filter: blur(8px);
+                opacity: 0.8;
+                transform: translateY(2px);
+                filter: blur(1px);
             }
 
-            20%,
-            80% {
+            50% {
                 opacity: 1;
                 transform: translateY(0);
                 filter: blur(0);
@@ -525,11 +520,11 @@
         }
 
         .left-text h2 {
-            font-size: 2.8rem;
+            font-size: 3rem;
             font-weight: 800;
             color: #ffffff;
-            line-height: 1.1;
-            margin-bottom: 1.2rem;
+            line-height: 1;
+            margin-bottom: 0.5rem;
             background: linear-gradient(135deg, #fff 0%, rgba(255, 255, 255, 0.7) 100%);
             -webkit-background-clip: text;
             background-clip: text;
@@ -537,10 +532,11 @@
         }
 
         .left-text p {
-            font-size: 1.05rem;
-            color: rgba(255, 255, 255, 0.6);
+            font-size: 1.15rem;
+            color: rgba(255, 255, 255, 0.7);
             line-height: 1.6;
-            margin-top: 1rem;
+            margin: 0 auto;
+            max-width: 550px;
         }
 
         /* Word Animation - using the same Pulse logic */
@@ -566,13 +562,12 @@
 
             0%,
             100% {
-                opacity: 0;
-                transform: translateY(10px);
-                filter: blur(8px);
+                opacity: 0.8;
+                transform: translateY(2px);
+                filter: blur(1px);
             }
 
-            20%,
-            80% {
+            50% {
                 opacity: 1;
                 transform: translateY(0);
                 filter: blur(0);
@@ -610,7 +605,7 @@
                 if (para) {
                     const words = para.innerText.split(' ');
                     para.innerHTML = words.map((word, i) =>
-                        `<span class="word-anim" style="animation-delay: ${i * 0.3}s">${word}</span>`
+                        `<span class="word-anim" style="animation-delay: ${i * 0.08}s">${word}</span>`
                     ).join(' ');
                 }
             });
@@ -688,9 +683,9 @@
                     <div class="or-divider"><span class="or-text">or</span></div>
 
                     <!-- Google Login Hook - only rendered when a real Client ID is set -->
-                    <div id="g_id_onload" data-client_id="{{ google_client_id }}"
-                        data-context="signin" data-ux_mode="popup" data-callback="handleCredentialResponse"
-                        data-auto_prompt="false" data-itp_support="true">
+                    <div id="g_id_onload" data-client_id="{{ google_client_id }}" data-context="signin"
+                        data-ux_mode="popup" data-callback="handleCredentialResponse" data-auto_prompt="false"
+                        data-itp_support="true">
                     </div>
 
                     <div class="google-btn-wrapper">

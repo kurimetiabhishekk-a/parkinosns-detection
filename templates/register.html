@@ -105,23 +105,23 @@
         }
 
         .left-text h2 {
-            font-size: 2.8rem;
+            font-size: 3rem;
             font-weight: 800;
             color: #ffffff;
-            line-height: 1.1;
-            margin-bottom: 1.2rem;
+            line-height: 1;
+            margin-bottom: 0.5rem;
             background: linear-gradient(135deg, #fff 0%, rgba(255, 255, 255, 0.7) 100%);
             -webkit-background-clip: text;
             background-clip: text;
-            /* Compatibility fix */
             -webkit-text-fill-color: transparent;
         }
 
         .left-text p {
-            font-size: 1.05rem;
-            color: rgba(255, 255, 255, 0.6);
+            font-size: 1.15rem;
+            color: rgba(255, 255, 255, 0.7);
             line-height: 1.6;
-            margin-top: 1rem;
+            margin: 0 auto;
+            max-width: 550px;
         }
 
         /* Word Animation - using the same Pulse logic */
@@ -479,7 +479,7 @@
                 if (para) {
                     const words = para.innerText.split(' ');
                     para.innerHTML = words.map((word, i) =>
-                        `<span class="word-anim" style="animation-delay: ${i * 0.3}s">${word}</span>`
+                        `<span class="word-anim" style="animation-delay: ${i * 0.08}s">${word}</span>`
                     ).join(' ');
                 }
             });
