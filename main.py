@@ -438,18 +438,21 @@ def upload():
             try:
                 voice_result = testVoice()
                 print(f"DEBUG: testVoice() returned: {voice_result}")
+
+                if len(voice_result) == 2:
+                    _, msg = voice_result
+                    return render_template('upload.html', mgs=msg, accuracy=None)
+                
+                # Default unpack for 3 values
+                label, result, accuracy = voice_result
+                session['voicePred'] = label
+                return render_template('upload.html', label=label, mgs=result, accuracy=accuracy)
+
             except Exception as e:
-                print(f"DEBUG: testVoice() CRASHED: {e}")
+                print(f"DEBUG: voice analysis CRASHED: {e}")
                 import traceback
                 traceback.print_exc()
-                return render_template('upload.html', mgs="Analysis failed due to a server error.", accuracy=None)
-
-            if len(voice_result) == 2:
-                _, msg = voice_result
-                return render_template('upload.html', mgs=msg, accuracy=None)
-            label, result, accuracy = voice_result
-            session['voicePred'] = label
-            return render_template('upload.html', label=label, mgs=result, accuracy=accuracy)
+                return render_template('upload.html', mgs="Analysis failed due to a server error. Please try a shorter recording.", accuracy=None)
     return render_template('upload.html')
 
 
