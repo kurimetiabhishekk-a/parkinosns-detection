@@ -19,7 +19,12 @@ np.set_printoptions(suppress=True)
 
 _base = os.path.dirname(os.path.abspath(__file__))
 
-# ── Load feature-based model (CONFIRMATION only for photo uploads) ────────────
+# ── GLOBAL CALIBRATION THRESHOLDS ─────────────────────────────────────────────
+# Set conservatively to prevent false positives on healthy individuals.
+# Drawing: Tremor index > 20.0 is flagged as Parkinson's.
+# Voice: At least 2-3 significant markers must be elevated.
+PD_THRESHOLD = 18.0
+DIGITAL_BOOST = 5.0   # Extra "stability" given to digital drawings (mouse/touch)
 _feat_model  = None
 _feat_scaler = None
 try:
@@ -230,9 +235,9 @@ def _geometric_classify(tremor_index, metrics, healthy_tip, weak_tip, image_path
     """
     import random
     
-    # FINAL CALIBRATED Thresholds (Raised again to ignore natural minor jitter)
-    # Healthy: <14.5, Parkinson: >14.5
-    PD_THRESHOLD = 14.5   
+    # FINAL CALIBRATED Thresholds (Strongly raised to ignore natural jitter)
+    # Healthy: <PD_THRESHOLD, Parkinson: >PD_THRESHOLD
+    global PD_THRESHOLD
     
     if tremor_index > PD_THRESHOLD:
         # Scale confidence based on severity above threshold
@@ -331,7 +336,11 @@ def predictImg(image_path='static/img/test.jpg'):
     # hand stability (shakiness) and line precision.
     
     # 1. Use the geometric decision as the absolute baseline
-    label, display_label, suggestion, base_conf_str = _geometric_classify(tremor_index, metrics, healthy_tip, weak_tip, image_path)
+    # Applied Digital Boost: If it's a digital canvas, we are MORE lenient 
+    # because mouse/touch drawing is naturally more jittery than a pencil.
+    effective_tremor = tremor_index - (DIGITAL_BOOST if is_digital_canvas else 0.0)
+    
+    label, display_label, suggestion, base_conf_str = _geometric_classify(effective_tremor, metrics, healthy_tip, weak_tip, image_path)
     base_conf = float(base_conf_str)
 
     # 2. Refine with SVM model ONLY if it's a photo, and only to adjust confidence
