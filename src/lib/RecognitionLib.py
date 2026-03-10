@@ -108,10 +108,10 @@ if PARSEL_AVAILABLE:
                 return 'Healthy', "Audio format not supported. Please use WAV.", 70.0
                 
             try:
-                # ULTRA-OPTIMIZATION for Render Free: 8kHz sample rate, 4s duration
+                # Increased duration to 10 seconds for better analysis
                 start_time = time.time()
-                print(f"DEBUG: Processing audio (8kHz, 4s limit)...")
-                y, sr = librosa.load(wavPath, sr=8000, duration=4.0)
+                print(f"DEBUG: Processing audio (8kHz, 10s limit)...")
+                y, sr = librosa.load(wavPath, sr=8000, duration=10.0)
                 print(f"DEBUG: load done in {time.time() - start_time:.2f}s")
                 
                 temp_wav = wavPath + ".fixed.wav"
@@ -241,8 +241,8 @@ else:
             import librosa
             start_time = time.time()
             print(f"DEBUG: librosa fallback analysis... (start: {start_time})")
-            # ULTRA-OPTIMIZATION for Render Free: 8kHz, 4s duration
-            y, sr = librosa.load(wavPath, sr=8000, mono=True, duration=4.0)
+            # Increased duration to 10 seconds
+            y, sr = librosa.load(wavPath, sr=8000, mono=True, duration=10.0)
             if len(y) < 100:
                 print("DEBUG: Audio too short or silent.")
                 return 'Healthy', "Silent recording.", 50.0
