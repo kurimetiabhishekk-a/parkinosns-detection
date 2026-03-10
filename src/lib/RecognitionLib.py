@@ -157,11 +157,11 @@ if PARSEL_AVAILABLE:
                     accuracy += random.uniform(-2, 2)
                     
                     if accuracy > 85:
-                        pattern = "Distinct Indicators"
+                        pattern = "Distinct Parkinson's Indicators"
                     elif accuracy > 75:
-                        pattern = "Potential Pattern"
+                        pattern = "Potential Parkinson's Pattern"
                     else:
-                        pattern = "Weak Indicators"
+                        pattern = "Weak Parkinson's Indicators"
                     return 'Parkinson', pattern, round(accuracy, 2)
             
             stability_factor = 1.0 - (localJitter / jitter_threshold)
@@ -273,11 +273,11 @@ if PARSEL_AVAILABLE:
 
         if is_parkinson:
             if accuracy > 90:
-                pattern = "Strong Vocal Indicators Detected"
+                pattern = "Strong Parkinson's Vocal Indicators"
             elif accuracy > 75:
-                pattern = "Parkinson's Vocal Pattern"
+                pattern = "Parkinson's Vocal Pattern Observed"
             else:
-                pattern = "Weak Vocal Indicators"
+                pattern = "Weak Parkinson's Vocal Indicators"
             return 'Parkinson', pattern, round(accuracy, 2)
         else:
             if accuracy > 90:
@@ -385,9 +385,9 @@ else:
                 confidence += random.uniform(-3, 3)
                 
                 if confidence > 85:
-                    pattern = "Detected Indicators"
+                    pattern = "Parkinson's Indicators Detected"
                 else:
-                    pattern = "Weak Indicators"
+                    pattern = "Weak Parkinson's Indicators"
                 return 'Parkinson', pattern, round(min(confidence, 98.5), 2)
             else:
                 stability = max(0.0, 1.0 - (amplitude_cv / AMPL_CV_THRESHOLD))

@@ -367,7 +367,7 @@
             style="background: linear-gradient(135deg,#fee2e2,#fecaca); border:3px solid #ef4444;">
             <i class="fas fa-exclamation-circle" style="color:#ef4444;"></i>
         </div>
-        {% elif 'Parkinson' in result or 'Weak' in result %}
+        {% elif label == 'Parkinson' %}
         <div class="results-icon positive">
             <i class="fas fa-exclamation-triangle"></i>
         </div>
@@ -397,7 +397,7 @@
                     <img class="image-preview" src="/static/img/test.jpg?t={{ timestamp }}" alt="Analyzed Drawing">
                 </div>
 
-                {% if 'Parkinson' in result or 'Weak' in result %}
+                {% if label == 'Parkinson' %}
                 <div class="prediction-badge parkinson">
                     <span class="status-pulse warning"></span>
                     <i class="fas fa-exclamation-circle"></i>
@@ -474,7 +474,7 @@
                         <i class="fas fa-redo" style="color:#6366f1;"></i>
                         <span>Click "Test Another Drawing" below to try again</span>
                     </li>
-                    {% elif 'Parkinson' in result or 'Weak' in result %}
+                    {% elif label == 'Parkinson' %}
                     <li>
                         <i class="fas fa-check"></i>
                         <span>Schedule an appointment with a neurologist for comprehensive evaluation</span>

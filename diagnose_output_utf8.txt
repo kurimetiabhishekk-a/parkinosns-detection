@@ -1,0 +1,31 @@
+﻿python : C:\Users\Abhishek\an
+aconda3\Lib\site-packages\pym
+ongo\pyopenssl_context.py:348
+: CryptographyDeprecationWarn
+ing: Parsed a negative 
+serial number, which is 
+disallowed by RFC 5280. 
+Loading this certificate 
+will cause an exception in 
+the next release of 
+cryptography.
+At line:1 char:1
++ python diagnose_mongo.py > 
+diagnose_output.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo           
+   : NotSpecified: (C:\User  
+  s\Abhish...f cryptograph   
+ y.:String) [], RemoteExc    
+eption
+    + FullyQualifiedErrorId  
+   : NativeCommandError
+ 
+  _crypto.X509.from_cryptogra
+phy(x509.load_der_x509_certif
+icate(cert))
+Testing URI: mongodb+srv://abhishekkurimeti97_db_user:E1lOIPImeOw43Izw@cluster0.gege15n.mongodb.net/parkisense?retryWrites=true&w=majority
+Connecting...
+ERROR TYPE: OperationFailure
+ERROR MESSAGE: bad auth : authentication failed, full error: {'ok': 0, 'errmsg': 'bad auth : authentication failed', 'code': 8000, 'codeName': 'AtlasError'}

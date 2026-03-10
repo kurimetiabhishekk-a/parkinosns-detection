@@ -1,0 +1,12 @@
+﻿diff --git a/requirements_render.txt b/requirements_render.txt
+index 15c18c7..c71ef4a 100644
+--- a/requirements_render.txt
++++ b/requirements_render.txt
+@@ -5,6 +5,7 @@ gunicorn
+ 
+ # Database
+ dnspython
++pymongo[srv]
+ 
+ # ML Fallbacks / Math
+ pandas

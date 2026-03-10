@@ -465,11 +465,11 @@
 			{% if mgs %}
 			<div class="result-card">
 				<div class="result-label">Diagnosis Result</div>
-				<div class="result-value {% if 'Healthy' in mgs %}healthy{% else %}weak{% endif %}">
-					{% if 'Healthy' in mgs %}
-					<i class="fas fa-check-circle"></i>
-					{% else %}
+				<div class="result-value {% if label == 'Parkinson' %}weak{% else %}healthy{% endif %}">
+					{% if label == 'Parkinson' %}
 					<i class="fas fa-exclamation-circle"></i>
+					{% else %}
+					<i class="fas fa-check-circle"></i>
 					{% endif %}
 					{{ mgs }}
 				</div>

@@ -400,7 +400,7 @@ def image_test():
     label, result, suggestion, accuracy = predictImg(r'static/img/test.jpg')
     if label is not None:
         session['pred'] = label
-    return render_template('image_test.html', result=result, suggestion=suggestion, confidence=accuracy)
+    return render_template('image_test.html', label=label, result=result, suggestion=suggestion, confidence=accuracy)
 
 
 @app.route('/upload', methods=['GET', 'POST'])
@@ -434,7 +434,7 @@ def upload():
                 return render_template('upload.html', mgs=msg, accuracy=None)
             label, result, accuracy = voice_result
             session['voicePred'] = label
-            return render_template('upload.html', mgs=result, accuracy=accuracy)
+            return render_template('upload.html', label=label, mgs=result, accuracy=accuracy)
     return render_template('upload.html')
 
 

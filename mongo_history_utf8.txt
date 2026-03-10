@@ -1,0 +1,269 @@
+﻿commit 3c613267dae9b6c509371d1fe9ed9f104fc653ba
+Author: abhishekkurimeti97-commits <abhishekkurimeti97@gmail.com>
+Date:   Mon Mar 9 06:53:23 2026 +0530
+
+    Secure deployment: remove hardcoded secrets and add diagnostic endpoint
+
+diff --git a/brute_mongo.py b/brute_mongo.py
+new file mode 100644
+index 0000000..4632399
+--- /dev/null
++++ b/brute_mongo.py
+@@ -0,0 +1,28 @@
++from pymongo import MongoClient
++import sys
++
++def try_conn(uri):
++    try:
++        client = MongoClient(uri, serverSelectionTimeoutMS=5000)
++        client.admin.command('ping')
++        return True
++    except Exception as e:
++        print(f"FAILED: {e}")
++        return False
++
++# Variant: change the 'l' (ell) to 'I' (eye) or '1' (one)
++passwords = [] # Cleared old passwords
++pwd_from_env = os.environ.get('MONGODB_PASSWORD', '')
++if pwd_from_env:
++    passwords.append(pwd_from_env)
++
++base_uri = "mongodb+srv://abhishekkurimeti97_db_user:{}@cluster0.gege15n.mongodb.net/parkisense?retryWrites=true&w=majority"
++
++for p in passwords:
++    u = base_uri.format(p)
++    print(f"Trying password variation: {p}")
++    if try_conn(u):
++        print(f"SUCCESS! The correct password is: {p}")
++        sys.exit(0)
++
++print("No variation worked.")
+diff --git a/brute_v2.py b/brute_v2.py
+new file mode 100644
+index 0000000..4823e67
+--- /dev/null
++++ b/brute_v2.py
+@@ -0,0 +1,27 @@
++from pymongo import MongoClient
++import sys
++
++def try_conn(uri):
++    try:
++        client = MongoClient(uri, serverSelectionTimeoutMS=2000)
++        client.admin.command('ping')
++        return True
++    except Exception:
++        return False
++
++base_pwd = os.environ.get('MONGODB_BASE_PASSWORD', 'E1lOIPImeOw43Izw')
++# Testing variations for first 4 characters
++chars1 = ['l', 'I', '1'] 
++chars2 = ['O', '0']
++
++for c1 in chars1:
++    for c2 in chars2:
++        # Build the password variation
++        var_pwd = f"E1{c1}{c2}" + base_pwd[4:]
++        print(f"Trying: {var_pwd[:5]}...")
++        u = f"mongodb+srv://abhishekkurimeti97_db_user:{var_pwd}@cluster0.gege15n.mongodb.net/parkisense?retryWrites=true&w=majority"
++        if try_conn(u):
++            print(f"SUCCESS! Found working credentials.")
++            sys.exit(0)
++
++print("No variation found.")
+diff --git a/deep_brute.py b/deep_brute.py
+new file mode 100644
+index 0000000..0ac241d
+--- /dev/null
++++ b/deep_brute.py
+@@ -0,0 +1,40 @@
++from pymongo import MongoClient
++import itertools
++import sys
++
++def try_conn(pwd):
++    uri = f"mongodb+srv://abhishekkurimeti97_db_user:{pwd}@cluster0.gege15n.mongodb.net/parkisense?retryWrites=true&w=majority"
++    try:
++        client = MongoClient(uri, serverSelectionTimeoutMS=1000)
++        client.admin.command('ping')
++        return True
++    except Exception:
++        return False
++
++variants = {
++    # index: [options]
++    2: ['l', 'I', '1'],
++    3: ['O', '0'],
++    4: ['I', 'l', '1'],
++    6: ['I', 'l', '1'],
++    9: ['O', '0'],
++    13: ['I', 'l', '1'],
++}
++
++base_raw = os.environ.get('MONGODB_BASE_PASSWORD', 'E1lOIPImeOw43Izw')
++base = list(base_raw)
++keys = sorted(variants.keys())
++combinations = list(itertools.product(*[variants[k] for k in keys]))
++
++print(f"Trying {len(combinations)} password variations...")
++
++for combo in combinations:
++    p_list = list(base)
++    for i, char in enumerate(combo):
++        p_list[keys[i]] = char
++    pwd = "".join(p_list)
++    if try_conn(pwd):
++        print(f"SUCCESS! The correct password is: {pwd}")
++        sys.exit(0)
++
++print("No variation worked.")
+diff --git a/line_brute.py b/line_brute.py
+new file mode 100644
+index 0000000..1099b13
+--- /dev/null
++++ b/line_brute.py
+@@ -0,0 +1,39 @@
++from pymongo import MongoClient
++import itertools
++import sys
++
++def try_conn(pwd):
++    uri = f"mongodb+srv://abhishekkurimeti97_db_user:{pwd}@cluster0.gege15n.mongodb.net/parkisense?retryWrites=true&w=majority"
++    try:
++        client = MongoClient(uri, serverSelectionTimeoutMS=1000)
++        client.admin.command('ping')
++        return True
++    except Exception:
++        return False
++
++# Base: E1lOIPlmeOw43Izw (Length 16)
++# Straight Line positions:
++# 2: l/I/1
++# 4: I/l/1
++# 6: l/I/1
++# 13: I/l/1
++
++options = ['l', 'I', '1']
++indices = [2, 4, 6, 13]
++base_raw = os.environ.get('MONGODB_BASE_PASSWORD', 'E1lOIPlmeOw43Izw')
++base = list(base_raw)
++
++combinations = list(itertools.product(options, repeat=len(indices)))
++
++print(f"Testing {len(combinations)} line variations...")
++
++for combo in combinations:
++    p = list(base)
++    for i, char in enumerate(combo):
++        p[indices[i]] = char
++    pwd = "".join(p)
++    if try_conn(pwd):
++        print(f"≡ƒÄë SUCCESS! Found: {pwd}")
++        sys.exit(0)
++
++print("No line variation worked.")
+diff --git a/render.yaml b/render.yaml
+index e4449a1..43d53d4 100644
+--- a/render.yaml
++++ b/render.yaml
+@@ -14,6 +14,6 @@ services:
+       - key: SECRET_KEY
+         value: parkisense_secret_render_2024
+       - key: MONGODB_URI
+-        value: mongodb+srv://abhishekkurimeti97_db_user:E1lOIPImeOw43Izw@cluster0.gege15n.mongodb.net/parkisense?retryWrites=true&w=majority
++        sync: false
+       - key: ENCRYPTION_KEY
+-        value: opVjAjT3z__mi9-j0dWS6idv5GqHFuk7CFQvuwB5Gio=
++        sync: false
+diff --git a/test_suspects.py b/test_suspects.py
+new file mode 100644
+index 0000000..5dee5fc
+--- /dev/null
++++ b/test_suspects.py
+@@ -0,0 +1,26 @@
++from pymongo import MongoClient
++import sys
++
++def try_conn(pwd):
++    uri = f"mongodb+srv://abhishekkurimeti97_db_user:{pwd}@cluster0.gege15n.mongodb.net/parkisense?retryWrites=true&w=majority"
++    try:
++        client = MongoClient(uri, serverSelectionTimeoutMS=2000)
++        client.admin.command('ping')
++        return True
++    except Exception as e:
++        # print(f"PWD: {pwd} - FAILED: {e}")
++        return False
++
++base_pwd = os.environ.get('MONGODB_BASE_PASSWORD', 'E1lOIPImeOw43Izw')
++passwords = [base_pwd] # Testing current configured password only
++# Add suspects manually if needed from environment
++if os.environ.get('MONGODB_SUSPECT'):
++    passwords.append(os.environ.get('MONGODB_SUSPECT'))
++
++for p in passwords:
++    print(f"Testing specifically: {p}")
++    if try_conn(p):
++        print(f"≡ƒÄë FOUND! The correct password is: {p}")
++        sys.exit(0)
++
++print("None of the common image suspects worked.")
+
+commit 0442711f7ec0db70113a76a566c55981796bb9c4
+Author: abhishekkurimeti97-commits <abhishekkurimeti97@gmail.com>
+Date:   Sun Mar 8 23:05:56 2026 +0530
+
+    Auto-fix: Restore DB keys in render.yaml so the deployment works out-of-the-box
+
+diff --git a/render.yaml b/render.yaml
+index 43d53d4..e4449a1 100644
+--- a/render.yaml
++++ b/render.yaml
+@@ -14,6 +14,6 @@ services:
+       - key: SECRET_KEY
+         value: parkisense_secret_render_2024
+       - key: MONGODB_URI
+-        sync: false
++        value: mongodb+srv://abhishekkurimeti97_db_user:E1lOIPImeOw43Izw@cluster0.gege15n.mongodb.net/parkisense?retryWrites=true&w=majority
+       - key: ENCRYPTION_KEY
+-        sync: false
++        value: opVjAjT3z__mi9-j0dWS6idv5GqHFuk7CFQvuwB5Gio=
+
+commit 995cece32a1479afda561b7b20022c1dea35c720
+Author: abhishekkurimeti97-commits <abhishekkurimeti97@gmail.com>
+Date:   Sun Mar 8 22:42:38 2026 +0530
+
+    SECURE: Revert hardcoded DB and encryption keys to prevent leakage in repository. Keys must be added in Render UI.
+
+diff --git a/render.yaml b/render.yaml
+index e4449a1..43d53d4 100644
+--- a/render.yaml
++++ b/render.yaml
+@@ -14,6 +14,6 @@ services:
+       - key: SECRET_KEY
+         value: parkisense_secret_render_2024
+       - key: MONGODB_URI
+-        value: mongodb+srv://abhishekkurimeti97_db_user:E1lOIPImeOw43Izw@cluster0.gege15n.mongodb.net/parkisense?retryWrites=true&w=majority
++        sync: false
+       - key: ENCRYPTION_KEY
+-        value: opVjAjT3z__mi9-j0dWS6idv5GqHFuk7CFQvuwB5Gio=
++        sync: false
+
+commit bcef1dba83a04f6a459bb2771c194ce3d4984c2b
+Author: abhishekkurimeti97-commits <abhishekkurimeti97@gmail.com>
+Date:   Sun Mar 8 22:40:22 2026 +0530
+
+    Update render.yaml to include Database URIs and encryption keys for Render autodeploy
+
+diff --git a/render.yaml b/render.yaml
+index 43d53d4..e4449a1 100644
+--- a/render.yaml
++++ b/render.yaml
+@@ -14,6 +14,6 @@ services:
+       - key: SECRET_KEY
+         value: parkisense_secret_render_2024
+       - key: MONGODB_URI
+-        sync: false
++        value: mongodb+srv://abhishekkurimeti97_db_user:E1lOIPImeOw43Izw@cluster0.gege15n.mongodb.net/parkisense?retryWrites=true&w=majority
+       - key: ENCRYPTION_KEY
+-        sync: false
++        value: opVjAjT3z__mi9-j0dWS6idv5GqHFuk7CFQvuwB5Gio=

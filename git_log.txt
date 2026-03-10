@@ -1,0 +1,15 @@
+﻿82aa2aa Restore MongoDB support to main app, discarding SQLite changes, and add pymongo to Render requirements.
+c227139 Fix static ML confidence scores by dynamically scaling off vocal and geometrical features
+cf2a993 Guarantee Render Free-tier compilation by removing massive packages (praat-parselmouth, opencv, skimage) and using robust fallbacks
+80554c5 Fix deploy failure: Unpin exact package versions so pip can resolve compatible wheels on Render Ubuntu
+ded4673 Fix database crash by switching to local SQLite database to bypass broken MongoDB credentials immediately
+a080fb8 Fix: pin all package versions with prebuilt py3.10 wheels to fix Render build failure
+5ae0938 Fix: switch to Docker runtime so system libs install correctly for praat/librosa/opencv
+c5b6c58 Fix: remove startup crash when MONGODB_URI env var is missing on Render
+9b48093 Fix login route exception handling
+c359d53 Security Audit: Add startup validation and robust .env.example
+3c61326 Secure deployment: remove hardcoded secrets and add diagnostic endpoint
+410ff57 Fix: Remove strict database ping on startup to prevent 'Unavailable' message when ping is restricted but access is not
+925aac4 DEBUG: Add more MongoDB connection logging to debug 'unavailable' error on Render
+0442711 Auto-fix: Restore DB keys in render.yaml so the deployment works out-of-the-box
+995cece SECURE: Revert hardcoded DB and encryption keys to prevent leakage in repository. Keys must be added in Render UI.

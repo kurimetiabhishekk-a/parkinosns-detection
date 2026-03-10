@@ -1,0 +1,12 @@
+MongoDB URI found: True
+Encryption key found: True
+Encryption OK
+MongoDB: CONNECTED OK
+Total users in DB: 6
+  demo@parkisense.com | name_enc=True | pwd=True | pet_enc=True
+  abhishekkurimeti97@gmail.com | name_enc=True | pwd=True | pet_enc=True
+  abhishekkueimeti97@gmail.com | name_enc=True | pwd=True | pet_enc=True
+  krishnagaddam63@gmail.com | name_enc=True | pwd=True | pet_enc=True
+  akhilamanasa194@gmail.com | name_enc=True | pwd=True | pet_enc=True
+  pandukurimeti05@gmail.com | name_enc=True | pwd=True | pet_enc=True
+Indexes: ['_id_', 'email_1']

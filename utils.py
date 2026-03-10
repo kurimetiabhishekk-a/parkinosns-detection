@@ -288,11 +288,11 @@ def predictImg(image_path='static/img/test.jpg'):
                 import random; confidence += random.uniform(-1, 1)
                 
                 if confidence > 90:
-                    display_label = 'Strong Indicators Detected'
+                    display_label = 'Strong Parkinson\'s Indicators Detected'
                 elif confidence > 82:
-                    display_label = 'Parkinson\'s Pattern'
+                    display_label = 'Parkinson\'s Pattern Observed'
                 else:
-                    display_label = 'Weak Indicators Detected'
+                    display_label = 'Weak Parkinson\'s Indicators Detected'
                 return 'Parkinson', display_label, weak_tip, f'{min(confidence, 99.1):.2f}'
             else:
                 confidence = round(72.0 + (raw_conf * 18.0) - (geom_factor * 10.0), 2)
@@ -333,11 +333,11 @@ def predictImg(image_path='static/img/test.jpg'):
         
         if label == 'Parkinson':
             if cnn_confidence > 90:
-                display_label = 'Strong Indicators'
+                display_label = 'Strong Parkinson\'s Indicators'
             elif cnn_confidence > 75:
                 display_label = 'Parkinson\'s Pattern'
             else:
-                display_label = 'Weak indicators'
+                display_label = 'Weak Parkinson\'s indicators'
             return 'Parkinson', display_label, weak_tip, f'{cnn_confidence:.2f}'
         else:
             return 'Healthy', 'Healthy Drawing Sample', healthy_tip, f'{cnn_confidence:.2f}'
@@ -351,11 +351,11 @@ def predictImg(image_path='static/img/test.jpg'):
         base_conf = 65.0 + min(25.0, (tremor_index - threshold) * 5.0)
         conf = base_conf + random.uniform(-2, 2)
         if conf > 85:
-            display_label = "Strong Indicators Detected"
+            display_label = "Strong Parkinson's Indicators Detected"
         elif conf > 70:
-            display_label = "Parkinson's Pattern"
+            display_label = "Parkinson's Pattern Observed"
         else:
-            display_label = "Weak Indicators Detected"
+            display_label = "Weak Parkinson's Indicators Detected"
         return 'Parkinson', display_label, weak_tip, f'{conf:.2f}'
     else:
         # Scale confidence more naturally: 72% to 96%
