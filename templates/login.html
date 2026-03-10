@@ -48,44 +48,7 @@
             /* Optional darkening overlay */
         }
 
-        .left-panel {
-            flex: 0 0 49%;
-            position: relative;
-            background: radial-gradient(circle at top left, #1e1b4b, #05050f 80%);
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
-            padding: 2.5rem;
-            overflow: hidden;
-        }
-
-        /* Ambient glowing orbs */
-        .left-panel::after {
-            content: '';
-            position: absolute;
-            width: 400px;
-            height: 400px;
-            background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
-            top: -100px;
-            left: -100px;
-            border-radius: 50%;
-            pointer-events: none;
-        }
-
-        .left-text h2 {
-            position: relative;
-            z-index: 10;
-            font-size: 1.7rem;
-            font-weight: 800;
-            color: #ffffff;
-            line-height: 1.25;
-            margin-bottom: 0.6rem;
-        }
-
-        .left-text p {
-            position: relative;
-            z-index: 10;
-        }
+        /* Consolidating styles below */
 
         /* ──────────────────────────────────────────
            RIGHT PANEL – Login Form
@@ -520,23 +483,26 @@
         }
 
         .left-text h2 {
-            font-size: 3rem;
+            font-size: 2.8rem;
             font-weight: 800;
             color: #ffffff;
-            line-height: 1;
-            margin-bottom: 0.5rem;
+            line-height: 1.1;
+            margin-bottom: 0.4rem;
             background: linear-gradient(135deg, #fff 0%, rgba(255, 255, 255, 0.7) 100%);
             -webkit-background-clip: text;
             background-clip: text;
             -webkit-text-fill-color: transparent;
+            text-align: center;
         }
 
         .left-text p {
-            font-size: 1.15rem;
-            color: rgba(255, 255, 255, 0.7);
+            font-size: 1.05rem;
+            color: rgba(255, 255, 255, 0.6);
             line-height: 1.6;
             margin: 0 auto;
-            max-width: 550px;
+            max-width: 440px;
+            text-align: center;
+            display: block;
         }
 
         /* Word Animation - using the same Pulse logic */
