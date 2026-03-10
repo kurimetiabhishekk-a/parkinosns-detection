@@ -107,7 +107,13 @@ if PARSEL_AVAILABLE:
                 return 'Healthy', "Audio format not supported. Please use WAV.", 70.0
                 
             try:
-                y, sr = librosa.load(wavPath, sr=None)
+                # Load with librosa (very forgiving of formats)
+                # Optimization: Downsample to 16kHz and limit to 5 seconds
+                start_time = time.time()
+                print(f"DEBUG: Processing audio with librosa... (start: {start_time})")
+                y, sr = librosa.load(wavPath, sr=16000, duration=5.0)
+                print(f"DEBUG: librosa load done in {time.time() - start_time:.2f}s")
+                
                 temp_wav = wavPath + ".fixed.wav"
                 sf.write(temp_wav, y, sr, subtype='PCM_16')
                 sound = parselmouth.Sound(temp_wav)
@@ -228,8 +234,12 @@ else:
         """Deterministic fallback using librosa features."""
         try:
             import librosa
-            y, sr = librosa.load(wavPath, sr=None, mono=True)
-            if len(y) < 100: return 'Healthy', "Silent recording.", 50.0
+            start_time = time.time()
+            print(f"DEBUG: librosa fallback analysis... (start: {start_time})")
+            y, sr = librosa.load(wavPath, sr=16000, mono=True, duration=5.0)
+            if len(y) < 100:
+                print("DEBUG: Audio too short or silent.")
+                return 'Healthy', "Silent recording.", 50.0
             
             y_voiced, _ = librosa.effects.trim(y, top_db=25)
             rms = librosa.feature.rms(y=y_voiced)[0]
