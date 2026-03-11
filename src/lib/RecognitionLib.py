@@ -154,10 +154,10 @@ if PARSEL_AVAILABLE:
         if LIBROSA_AVAILABLE:
             try:
                 t0 = time.time()
-                y, sr = librosa.load(wavPath, sr=16000, mono=True, duration=10.0)
-                print(f"DEBUG [predict]: librosa load OK in {time.time()-t0:.2f}s — samples={len(y)}, sr={sr}")
+                y, sr = librosa.load(wavPath, sr=16000, mono=True, duration=5.0)
+                print(f"DEBUG [predict]: librosa load OK in {time.time()-t0:.2f}s -- samples={len(y)}, sr={sr}")
 
-                if len(y) < 1600:  # < 0.1s at 16kHz
+                if len(y) < 800:  # < 0.05s at 16kHz
                     print("DEBUG [predict]: Audio too short.")
                     return 'Healthy', "Recording too short. Please record at least 3 seconds of sustained vowel.", 50.0
 
@@ -354,9 +354,9 @@ else:
         """Deterministic fallback using librosa amplitude/ZCR features."""
         try:
             print(f"DEBUG [predict-librosa]: Librosa-only fallback for {wavPath}")
-            y, sr = librosa.load(wavPath, sr=16000, mono=True, duration=10.0)
+            y, sr = librosa.load(wavPath, sr=16000, mono=True, duration=5.0)
 
-            if len(y) < 1600:
+            if len(y) < 800:
                 return 'Healthy', "Recording too short. Please record at least 3 seconds.", 50.0
 
             y_voiced, _ = librosa.effects.trim(y, top_db=25)
