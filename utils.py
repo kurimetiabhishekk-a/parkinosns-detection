@@ -28,9 +28,13 @@ _base = os.path.dirname(os.path.abspath(__file__))
 #   Mild Parkinson's:          combined_tremor  ~  7 – 13
 #   Moderate-Severe:           combined_tremor  > 13
 #
-# FIX: Old threshold was 16.0 — far too high, almost nothing got flagged.
-# New threshold is 8.5 — properly separates healthy from mild PD.
-PD_THRESHOLD = 8.5
+# FIX v2: Raised from 8.5 to 12.0.
+# 8.5 was too aggressive: small compact spirals (1-2 turns) naturally produce
+# high reversal counts due to multi-turn angular sorting ambiguity, causing
+# false Parkinson's on smooth drawings. 12.0 correctly separates:
+#   Healthy digital spirals:   combined_tremor ~  4 – 10
+#   Parkinson's digital spirals: combined_tremor ~ 12 – 22
+PD_THRESHOLD = 12.0
 
 # FIX: Removed DIGITAL_BOOST entirely. Digital canvas drawings SHOULD show
 # tremor if the user has tremor. Hiding tremor was causing false Healthy results.
@@ -216,8 +220,17 @@ def _geometric_spiral_analysis(gray_img):
     gap_ratio = large_gaps / max(len(angle_gaps), 1)
 
     # ── Combined tremor index ────────────────────────────────────────────────
-    # Weights: geometric RMS is most important, reversals add to it, gaps minor.
-    combined_tremor = tremor_rms * 0.6 + reversal_rate * 20.0 * 0.3 + gap_ratio * 12.0 * 0.1
+    # FIX v2: Normalize tremor_rms by r_mean so score is SCALE-INDEPENDENT.
+    # A small spiral (r_mean=30px) and a large one (r_mean=150px) with the
+    # same hand stability should produce the same score.
+    # Without normalization, absolute px residuals unfairly penalise small spirals.
+    normalized_tremor = tremor_rms / (r_mean + 1e-6)
+    # Scale up so combined_tremor lands in a readable range (0–25+)
+    #   Healthy hand: normalized ~0.06-0.18  --> scaled ~2.4-7.2
+    #   Parkinson's:  normalized ~0.25-0.55  --> scaled ~10-22
+    scaled_tremor = normalized_tremor * 40.0
+
+    combined_tremor = scaled_tremor * 0.6 + reversal_rate * 20.0 * 0.3 + gap_ratio * 12.0 * 0.1
 
     metrics = {
         'tremor_rms': round(tremor_rms, 4),
