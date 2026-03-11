@@ -219,16 +219,33 @@ def _geometric_spiral_analysis(gray_img):
     large_gaps = np.sum(np.abs(angle_gaps) > 0.5)
     gap_ratio = large_gaps / max(len(angle_gaps), 1)
 
-    # ── Combined tremor index ────────────────────────────────────────────────
-    # FIX v2: Normalize tremor_rms by r_mean so score is SCALE-INDEPENDENT.
-    # A small spiral (r_mean=30px) and a large one (r_mean=150px) with the
-    # same hand stability should produce the same score.
-    # Without normalization, absolute px residuals unfairly penalise small spirals.
-    normalized_tremor = tremor_rms / (r_mean + 1e-6)
-    # Scale up so combined_tremor lands in a readable range (0–25+)
-    #   Healthy hand: normalized ~0.06-0.18  --> scaled ~2.4-7.2
-    #   Parkinson's:  normalized ~0.25-0.55  --> scaled ~10-22
-    scaled_tremor = normalized_tremor * 40.0
+    # ── Combined tremor index (hybrid scale) ───────────────────────────
+    # FIX v3: Hybrid approach based on spiral physical size:
+    #
+    #  Small spirals  (r_mean <= 70px) = digital canvas drawings.
+    #    These have naturally low absolute pixel tremor even when shaky;
+    #    normalize by r_mean so a 3px deviation on a 40px spiral
+    #    scores the same as a 9px deviation on a 120px spiral.
+    #
+    #  Large spirals  (r_mean >  70px) = scanned paper / photo uploads.
+    #    Real hand tremor produces 15-40px absolute deviations on paper.
+    #    Do NOT normalize by r_mean or those get collapsed to near-zero.
+    #    Use absolute tremor_rms * fixed scale factor instead.
+    #
+    SMALL_SPIRAL_CUTOFF = 70.0  # pixels
+
+    if r_mean <= SMALL_SPIRAL_CUTOFF:
+        # Digital canvas: normalize so size doesn\'t matter
+        # Healthy: normalized ~0.06-0.18 -> scaled ~2.4-7.2
+        # Parkinson: normalized ~0.25-0.55 -> scaled ~10-22
+        scaled_tremor = (tremor_rms / (r_mean + 1e-6)) * 40.0
+        print(f"DEBUG [geom]: small-spiral path, scaled_tremor={scaled_tremor:.3f}")
+    else:
+        # Scanned paper: use absolute tremor, scaled so ~15px=9 (mild PD), ~30px=18 (severe)
+        # Healthy paper spiral: tremor_rms ~3-7px -> scaled ~1.8-4.2
+        # Parkinson paper spiral: tremor_rms ~15-40px -> scaled ~9-24
+        scaled_tremor = tremor_rms * 0.6
+        print(f"DEBUG [geom]: large-spiral path, scaled_tremor={scaled_tremor:.3f}")
 
     combined_tremor = scaled_tremor * 0.6 + reversal_rate * 20.0 * 0.3 + gap_ratio * 12.0 * 0.1
 
@@ -387,29 +404,29 @@ def predictImg(image_path='static/img/test.jpg'):
 
             print(f"DEBUG [predictImg]: SVM pred={pred_label_idx} (PD={svm_is_parkinson}), raw_conf={raw_conf:.3f}")
 
-            # Only adjust confidence, do NOT override geometric label
-            if (label == 'Parkinson') == svm_is_parkinson:
-                # Agreement: boost confidence slightly
-                final_conf = round(min(99.0, base_conf + raw_conf * 5.0), 2)
-            else:
-                # Disagreement: lower confidence (models split)
-                final_conf = round(max(60.0, base_conf - raw_conf * 8.0), 2)
+            # FIX v3: For PHOTO UPLOADS, SVM is authoritative.
+            # The SVM was trained on real scanned paper spirals — exactly this input type.
+            # Let it OVERRIDE the geometric label. Geometric is a fallback, not ground truth.
+            svm_label = 'Parkinson' if svm_is_parkinson else 'Healthy'
+            svm_conf  = round(min(98.0, raw_conf * 100.0), 2)
 
-            if label == 'Parkinson':
-                if final_conf > 90: display_label = "Strong Parkinson's Indicators Detected"
-                elif final_conf > 82: display_label = "Parkinson's Pattern Observed"
-                else: display_label = "Weak Parkinson's Indicators Detected"
+            if svm_label == 'Parkinson':
+                if svm_conf > 88: disp = "Strong Parkinson's Indicators Detected"
+                elif svm_conf > 78: disp = "Parkinson's Pattern Observed"
+                else: disp = "Weak Parkinson's Indicators Detected"
+                sug = weak_tip
             else:
-                if final_conf > 88: display_label = "Healthy Control Sample"
-                else: display_label = "Likely Healthy Sample"
+                if svm_conf > 85: disp = "Healthy Control Sample"
+                else: disp = "Likely Healthy Sample"
+                sug = healthy_tip
 
-            print(f"DEBUG [predictImg]: After SVM refinement: label={label}, conf={final_conf}%")
-            return label, display_label, suggestion, f'{final_conf:.2f}'
+            print(f"DEBUG [predictImg]: SVM overrides geometric: label={svm_label}, conf={svm_conf}%")
+            return svm_label, disp, sug, f'{svm_conf:.2f}'
 
         except Exception as e:
-            print(f"DEBUG [predictImg]: SVM refinement error: {e}")
+            print(f"DEBUG [predictImg]: SVM error: {e} — falling back to geometric")
 
-    # ── Step 4: Keras CNN (fallback, photo only) ──────────────────────────────
+    # ── Step 4: Keras CNN (fallback for photos when SVM unavailable) ───────────
     if not is_digital_canvas and model is not None:
         try:
             size = (224, 224)
@@ -425,19 +442,22 @@ def predictImg(image_path='static/img/test.jpg'):
             prediction = model.predict(data)
             idx = int(np.argmax(prediction))
             cnn_label = 'Parkinson' if idx == 1 else 'Healthy'
-            cnn_conf = float(np.max(prediction)) * 100
+            cnn_conf  = round(float(np.max(prediction)) * 100, 2)
             print(f"DEBUG [predictImg]: Keras CNN: label={cnn_label}, conf={cnn_conf:.1f}%")
 
-            if cnn_label == label:
-                final_conf = round(min(99.0, base_conf + 5.0), 2)
+            if cnn_label == 'Parkinson':
+                cnn_disp = "Parkinson's Pattern Observed"
+                cnn_sug  = weak_tip
             else:
-                final_conf = round(max(60.0, base_conf - 10.0), 2)
+                cnn_disp = "Likely Healthy Sample"
+                cnn_sug  = healthy_tip
 
-            return label, display_label, suggestion, f'{final_conf:.2f}'
+            return cnn_label, cnn_disp, cnn_sug, f'{cnn_conf:.2f}'
 
         except Exception as e:
             print(f"DEBUG [predictImg]: Keras error: {e}")
 
+    # ── Step 5: Pure geometric fallback (last resort) ────────────────────────
     print(f"DEBUG [predictImg]: Returning pure geometric result: {label}, {base_conf}%")
     print('='*60)
     return label, display_label, suggestion, f'{base_conf:.2f}'
