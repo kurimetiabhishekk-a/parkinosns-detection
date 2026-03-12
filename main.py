@@ -422,32 +422,12 @@ def upload():
             
             if audio_b64 and ',' in audio_b64:
                 import base64
-                import io
                 header, encoded = audio_b64.split(",", 1)
                 try:
-                    # Write the raw bytes first
                     raw_audio = base64.b64decode(encoded)
-                    temp_path = os.path.join(savepath, 'raw_upload.tmp')
-                    with open(temp_path, 'wb') as f_out:
+                    with open(os.path.join(savepath, 'test.wav'), 'wb') as f_out:
                         f_out.write(raw_audio)
-                        
-                    # Force convert to PCM WAV using Librosa or Soundfile to fix WebM headers
-                    try:
-                        import librosa
-                        import soundfile as sf
-                        # Load any format (WebM, OGG, M4A) and export as clean PCM WAV
-                        y, sr = librosa.load(temp_path, sr=16000, mono=True)
-                        sf.write(os.path.join(savepath, 'test.wav'), y, sr, subtype='PCM_16')
-                        print("DEBUG: Recorded web-audio converted to true PCM WAV.")
-                    except Exception as ex:
-                        print(f"DEBUG: Librosa quick-convert failed ({ex}), falling back to direct write.")
-                        with open(os.path.join(savepath, 'test.wav'), 'wb') as f_out:
-                            f_out.write(raw_audio)
-                            
-                    # Clean up
-                    if os.path.exists(temp_path):
-                        os.remove(temp_path)
-                        
+                    print("DEBUG: Recorded audio unpacked from base64 instantly.")
                 except Exception as e:
                     print(f"DEBUG: Base64 decode error: {e}")
             elif f and f.filename:
