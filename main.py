@@ -52,6 +52,7 @@ app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_SECURE'] = os.environ.get('FLASK_ENV') == 'production'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # Allow up to 50 MB uploads
 
 # ── MongoDB (users only: login / register / forgot-password) ──────────────────
 MONGODB_URI = (os.environ.get('MONGODB_URI') or 'mongodb+srv://abhishekkurimeti97_db_user:ParkiSense_2026_Secure123@cluster0.gege15n.mongodb.net/parkisense?retryWrites=true&w=majority').strip()
