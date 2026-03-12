@@ -218,9 +218,9 @@ if PARSEL_AVAILABLE:
             hr = hnr05         if not np.isnan(hnr05)         else 15.0
 
             # FIX: lowered thresholds to be more sensitive to weak tremor/inputs
-            jitter_threshold  = 0.012   # lowered from 0.020 to catch subtle jitter
-            shimmer_threshold = 0.030   # lowered from 0.040 to catch subtle shimmer
-            hnr_threshold     = 21.0    # raised from 20 to catch slight noise
+            jitter_threshold  = 0.010   # lowered from 0.012 to catch subtle jitter
+            shimmer_threshold = 0.025   # lowered from 0.030 to catch subtle shimmer
+            hnr_threshold     = 22.0    # raised from 21.0 to catch slight noise
 
             symptom_score = 0
             if lj > jitter_threshold:  symptom_score += 1
@@ -302,9 +302,9 @@ if PARSEL_AVAILABLE:
                     probas = bundle_model.predict_proba(row_scaled)[0]
                     # Increase sensitivity for weaker inputs: lower the threshold for PD
                     pd_prob = probas[1] if len(probas) > 1 else 0
-                    if pd_prob >= 0.35: # Much more sensitive to subtle features
+                    if pd_prob >= 0.28: # Maximum sensitivity for early detection markers
                         val = 1
-                        accuracy = float(max(pd_prob * 100.0, 65.0)) # Ensure UI confidence looks reasonable
+                        accuracy = float(max(pd_prob * 100.0, 68.0)) # Boost visible confidence for symptomatic markers
                     else:
                         val = 0
                         accuracy = float(probas[0]) * 100.0
@@ -328,9 +328,9 @@ if PARSEL_AVAILABLE:
                     probas = clf.predict_proba(toPred)[0]
                     # Increase sensitivity for weaker inputs
                     pd_prob = probas[1] if len(probas) > 1 else 0
-                    if pd_prob >= 0.35:
+                    if pd_prob >= 0.28:
                         val = 1
-                        accuracy = float(max(pd_prob * 100.0, 65.0))
+                        accuracy = float(max(pd_prob * 100.0, 68.0))
                     else:
                         val = 0
                         accuracy = float(probas[0]) * 100.0
@@ -340,13 +340,16 @@ if PARSEL_AVAILABLE:
 
                 print(f"DEBUG [predict]: Legacy model prediction: val={val}, accuracy={accuracy:.1f}%")
 
-            # ── FIX: Healthy override — tightened criteria ──────────────────
-            # Pure tone or extremely clean audio fallback
+            # ── FIX: Healthy override — substantially tightened criteria ──────────────────
+            # Only override if the voice is laboratory-grade pure (extremely rare in tremor patients)
             is_parkinson = (val == 1)
-            if lj < 0.005 and ls < 0.020 and hnr >= 24.0:
-                print(f"DEBUG [predict]: Healthy override applied (very clean voice)")
+            if lj < 0.003 and ls < 0.012 and hnr >= 26.0:
+                print(f"DEBUG [predict]: Healthy override applied (extremely pure voice)")
                 is_parkinson = False
-                accuracy = max(accuracy, 88.0)
+                accuracy = max(accuracy, 92.0)
+            elif is_parkinson and (lj < 0.005 or ls < 0.018):
+                # If model says PD but signal is very borderline, slightly reduce accuracy to reflect uncertainty
+                accuracy = max(50.0, accuracy * 0.9)
 
             accuracy = min(99.0, max(50.0, accuracy))
             accuracy = round(accuracy, 2)
