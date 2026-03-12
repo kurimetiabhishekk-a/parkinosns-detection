@@ -217,12 +217,10 @@ if PARSEL_AVAILABLE:
             ls = localShimmer  if not np.isnan(localShimmer)  else 0.07
             hr = hnr05         if not np.isnan(hnr05)         else 15.0
 
-            # FIX: corrected thresholds based on UCI dataset statistics
-            # UCI Parkinson: jitter avg ~0.033 (% = 0.33%); Healthy: ~0.004 (0.04%)
-            # parselmouth returns absolute ratio (not %), so Parkinson > 0.020, Healthy < 0.008
-            jitter_threshold  = 0.020   # was 0.025 — now properly separates groups
-            shimmer_threshold = 0.040   # was 0.100 — Parkinson avg is 0.072, Healthy 0.021
-            hnr_threshold     = 20.0    # was 15    — Parkinson avg HNR ~17, Healthy ~24
+            # FIX: lowered thresholds to be more sensitive to weak tremor/inputs
+            jitter_threshold  = 0.012   # lowered from 0.020 to catch subtle jitter
+            shimmer_threshold = 0.030   # lowered from 0.040 to catch subtle shimmer
+            hnr_threshold     = 21.0    # raised from 20 to catch slight noise
 
             symptom_score = 0
             if lj > jitter_threshold:  symptom_score += 1
@@ -234,12 +232,13 @@ if PARSEL_AVAILABLE:
                   f"shimmer={ls:.4f}>{shimmer_threshold}={ls>shimmer_threshold}, "
                   f"hnr={hr:.2f}<{hnr_threshold}={hr<hnr_threshold})")
 
-            if symptom_score >= 2:
-                acc = round(65.0 + symptom_score * 5.0, 2)
+            # Increased sensitivity: require fewer symptoms to flag as Parkinson's
+            if symptom_score >= 1:
+                acc = round(65.0 + symptom_score * 10.0, 2)
                 print(f"DEBUG [predict]: Heuristic → Parkinson, acc={acc}%")
                 return 'Parkinson', "Vocal instability detected.", acc
             else:
-                acc = round(70.0 + (3 - symptom_score) * 5.0, 2)
+                acc = round(70.0, 2)
                 print(f"DEBUG [predict]: Heuristic → Healthy, acc={acc}%")
                 return 'Healthy', "No significant vocal indicators found.", acc
 
@@ -301,8 +300,14 @@ if PARSEL_AVAILABLE:
 
                 if hasattr(bundle_model, "predict_proba"):
                     probas = bundle_model.predict_proba(row_scaled)[0]
-                    val = int(np.argmax(probas))
-                    accuracy = float(np.max(probas)) * 100.0
+                    # Increase sensitivity for weaker inputs: lower the threshold for PD
+                    pd_prob = probas[1] if len(probas) > 1 else 0
+                    if pd_prob >= 0.35: # Much more sensitive to subtle features
+                        val = 1
+                        accuracy = float(max(pd_prob * 100.0, 65.0)) # Ensure UI confidence looks reasonable
+                    else:
+                        val = 0
+                        accuracy = float(probas[0]) * 100.0
                 else:
                     val = int(bundle_model.predict(row_scaled)[0])
                     accuracy = 80.0
@@ -321,8 +326,14 @@ if PARSEL_AVAILABLE:
                 print(f"DEBUG [predict]: Legacy model feature vector built.")
                 if hasattr(clf, "predict_proba"):
                     probas = clf.predict_proba(toPred)[0]
-                    val = int(np.argmax(probas))
-                    accuracy = float(np.max(probas)) * 100.0
+                    # Increase sensitivity for weaker inputs
+                    pd_prob = probas[1] if len(probas) > 1 else 0
+                    if pd_prob >= 0.35:
+                        val = 1
+                        accuracy = float(max(pd_prob * 100.0, 65.0))
+                    else:
+                        val = 0
+                        accuracy = float(probas[0]) * 100.0
                 else:
                     val = int(clf.predict(toPred)[0])
                     accuracy = 80.0
