@@ -681,16 +681,16 @@
 
 						const audioBlob = new Blob(audioChunks); // Browser native format (likely webm/opus)
 						
-						// Decode native recording and manually encode into standard PCM .wav
-						const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+						// Decode native recording and automatically downsample to 16kHz Mono to save bandwidth
+						const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
 						audioBlob.arrayBuffer().then(arrayBuffer => {
 							return audioCtx.decodeAudioData(arrayBuffer);
 						}).then(audioBuffer => {
-							const numOfChan = audioBuffer.numberOfChannels;
+							const numOfChan = 1; // Force Mono
 							const length = audioBuffer.length * numOfChan * 2 + 44;
 							const buffer = new ArrayBuffer(length);
 							const view = new DataView(buffer);
-							let channels = [], i, sample, offset = 0, pos = 0;
+							let sample, offset = 0, pos = 0;
 
 							function setUint16(data) { view.setUint16(pos, data, true); pos += 2; }
 							function setUint32(data) { view.setUint32(pos, data, true); pos += 4; }
@@ -709,17 +709,15 @@
 							setUint32(0x61746164); // "data" - chunk
 							setUint32(length - pos - 4); // chunk length
 
-							for (i = 0; i < numOfChan; i++)
-								channels.push(audioBuffer.getChannelData(i));
+							// Only take the first channel (mono)
+							const channelData = audioBuffer.getChannelData(0);
 
 							while (pos < length) {
-								for (i = 0; i < numOfChan; i++) {
-									sample = Math.max(-1, Math.min(1, channels[i][offset]));
-									sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
-									view.setInt16(pos, sample, true);
-									pos += 2;
-								}
-								offset++
+								sample = Math.max(-1, Math.min(1, channelData[offset]));
+								sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
+								view.setInt16(pos, sample, true);
+								pos += 2;
+								offset++;
 							}
 							
 							const finalWavBlob = new Blob([buffer], { type: "audio/wav" });
