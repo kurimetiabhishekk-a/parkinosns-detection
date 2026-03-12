@@ -679,23 +679,66 @@
 
 						stream.getTracks().forEach(track => track.stop());
 
-						const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-						// Convert blob to base64
-						const reader = new FileReader();
-						reader.readAsDataURL(audioBlob);
-						reader.onloadend = function () {
-							document.getElementById('audioBase64').value = reader.result;
+						const audioBlob = new Blob(audioChunks); // Browser native format (likely webm/opus)
+						
+						// Decode native recording and manually encode into standard PCM .wav
+						const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+						audioBlob.arrayBuffer().then(arrayBuffer => {
+							return audioCtx.decodeAudioData(arrayBuffer);
+						}).then(audioBuffer => {
+							const numOfChan = audioBuffer.numberOfChannels;
+							const length = audioBuffer.length * numOfChan * 2 + 44;
+							const buffer = new ArrayBuffer(length);
+							const view = new DataView(buffer);
+							let channels = [], i, sample, offset = 0, pos = 0;
 
-							// Fallback attempt to set input files
-							try {
-								const file = new File([audioBlob], "recorded_voice_sample.wav", { type: 'audio/wav' });
-								const dt = new DataTransfer();
-								dt.items.add(file);
-								document.getElementById('audioInput').files = dt.files;
-							} catch (e) { }
+							function setUint16(data) { view.setUint16(pos, data, true); pos += 2; }
+							function setUint32(data) { view.setUint32(pos, data, true); pos += 4; }
 
-							updateUploadUI('recorded_voice_sample.wav');
-						}
+							setUint32(0x46464952); // "RIFF"
+							setUint32(length - 8); // file length - 8
+							setUint32(0x45564157); // "WAVE"
+							setUint32(0x20746d66); // "fmt " chunk
+							setUint32(16); // length = 16
+							setUint16(1); // PCM (uncompressed)
+							setUint16(numOfChan);
+							setUint32(audioBuffer.sampleRate);
+							setUint32(audioBuffer.sampleRate * 2 * numOfChan); // avg. bytes/sec
+							setUint16(numOfChan * 2); // block-align
+							setUint16(16); // 16-bit
+							setUint32(0x61746164); // "data" - chunk
+							setUint32(length - pos - 4); // chunk length
+
+							for (i = 0; i < numOfChan; i++)
+								channels.push(audioBuffer.getChannelData(i));
+
+							while (pos < length) {
+								for (i = 0; i < numOfChan; i++) {
+									sample = Math.max(-1, Math.min(1, channels[i][offset]));
+									sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
+									view.setInt16(pos, sample, true);
+									pos += 2;
+								}
+								offset++
+							}
+							
+							const finalWavBlob = new Blob([buffer], { type: "audio/wav" });
+							const reader = new FileReader();
+							reader.readAsDataURL(finalWavBlob);
+							reader.onloadend = function () {
+								document.getElementById('audioBase64').value = reader.result;
+								try {
+									const file = new File([finalWavBlob], "recorded_voice_sample.wav", { type: 'audio/wav' });
+									const dt = new DataTransfer();
+									dt.items.add(file);
+									document.getElementById('audioInput').files = dt.files;
+								} catch (e) { }
+								updateUploadUI('recorded_voice_sample.wav');
+							}
+						}).catch(err => {
+							console.error("Audio Conversion Error:", err);
+							alert("An error occurred formatting the audio. Please try again.");
+						});
 					};
 				};
 
