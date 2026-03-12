@@ -140,43 +140,52 @@ if PARSEL_AVAILABLE:
         """Primary voice prediction using ML model + Praat acoustic features.
 
         Pipeline:
-          1. Librosa: normalise audio to 16kHz mono PCM.
-          2. Parselmouth: extract jitter, shimmer, HNR, F0 from clean WAV.
-          3. ML model (UCI bundle or legacy): predict.
-          4. Heuristic fallback if model unavailable or audio too noisy.
+          1. Parselmouth: try to read standard WAV directly (extremely fast).
+          2. Librosa fallback: if audio is WebM disguised as WAV, decode & normalise.
+          3. Parselmouth: extract jitter, shimmer, HNR, F0 from clean audio.
+          4. ML model (UCI bundle or legacy): predict.
+          5. Heuristic fallback if model unavailable or audio too noisy.
         """
         print(f"\n{'='*60}")
         print(f"DEBUG [predict]: Starting voice analysis for {wavPath}")
         temp_wav = wavPath + ".fixed.wav"
         sound = None
 
-        # ── Step 1: Convert to 16kHz mono PCM via librosa ────────────────────
-        if LIBROSA_AVAILABLE:
-            try:
-                t0 = time.time()
-                y, sr = librosa.load(wavPath, sr=16000, mono=True, duration=5.0)
-                print(f"DEBUG [predict]: librosa load OK in {time.time()-t0:.2f}s -- samples={len(y)}, sr={sr}")
-
-                if len(y) < 800:  # < 0.05s at 16kHz
-                    print("DEBUG [predict]: Audio too short.")
-                    return 'Healthy', "Recording too short. Please record at least 3 seconds of sustained vowel.", 50.0
-
-                sf.write(temp_wav, y, sr, subtype='PCM_16')
-                del y
-                gc.collect()
-                print(f"DEBUG [predict]: Converted WAV written to {temp_wav}")
-            except Exception as e:
-                print(f"DEBUG [predict]: librosa pre-processing failed: {e}")
-                temp_wav = None
-
-        # ── Step 2: Load into parselmouth ─────────────────────────────────────
+        # ── Step 1 & 2: Load into parselmouth (with librosa fallback) ────────
         try:
-            load_path = temp_wav if (temp_wav and os.path.exists(temp_wav)) else wavPath
-            print(f"DEBUG [predict]: Loading into parselmouth: {load_path}")
-            sound = parselmouth.Sound(load_path)
+            print(f"DEBUG [predict]: Attempting direct Parselmouth load...")
+            sound = parselmouth.Sound(wavPath)
+            print(f"DEBUG [predict]: Direct load successful. Duration={sound.duration:.2f}s")
+            
+            if sound.duration < 0.05:
+                return 'Healthy', "Recording too short. Please record at least 3 seconds of sustained vowel.", 50.0
+                
+            # Limit processing to first 5 seconds to prevent slow Praat analysis
+            if sound.duration > 5.0:
+                sound = sound.extract_part(from_time=0.0, to_time=5.0, preserve_times=True)
+                
         except Exception as e:
-            print(f"DEBUG [predict]: Parselmouth load failed: {e}")
-            sound = None
+            print(f"DEBUG [predict]: Direct load failed ({e}). Attempting librosa fallback...")
+            if LIBROSA_AVAILABLE:
+                try:
+                    t0 = time.time()
+                    # sr=None to avoid slow resampling if possible
+                    y, sr = librosa.load(wavPath, sr=None, mono=True, duration=5.0)
+                    print(f"DEBUG [predict]: librosa load OK in {time.time()-t0:.2f}s -- samples={len(y)}, sr={sr}")
+
+                    if len(y) < sr * 0.05:
+                        print("DEBUG [predict]: Audio too short.")
+                        return 'Healthy', "Recording too short. Please record at least 3 seconds of sustained vowel.", 50.0
+
+                    sf.write(temp_wav, y, sr, subtype='PCM_16')
+                    del y
+                    gc.collect()
+                    print(f"DEBUG [predict]: Converted WAV written to {temp_wav}")
+                    sound = parselmouth.Sound(temp_wav)
+                except Exception as e2:
+                    print(f"DEBUG [predict]: librosa fallback failed: {e2}")
+            else:
+                 print(f"DEBUG [predict]: librosa unavailable for fallback.")
         finally:
             if temp_wav and os.path.exists(temp_wav):
                 try:
@@ -185,7 +194,7 @@ if PARSEL_AVAILABLE:
                     pass
 
         if sound is None:
-            return 'Healthy', "Could not read audio. Please upload a .WAV file or re-record.", 60.0
+            return 'Healthy', "Could not read audio. Please upload a standard .WAV file.", 60.0
 
         # ── Step 3: Extract acoustic features ────────────────────────────────
         print("DEBUG [predict]: Extracting Praat features...")
@@ -246,7 +255,7 @@ if PARSEL_AVAILABLE:
             a3s = 0.026 if np.isnan(apq3Shimmer)           else apq3Shimmer
             a5s = 0.031 if np.isnan(aqpq5Shimmer)          else aqpq5Shimmer
             a11s= 0.038 if np.isnan(apq11Shimmer)          else apq11Shimmer
-            hnr = 19.5  if np.isnan(hnr05)                 else hnr05
+            hnr = 25.0  if np.isnan(hnr05)                 else hnr05 # perfectly pure tone has no noise, so HNR is missing (assumed high/healthy)
             # FIX: clamp hnr before inversion (parselmouth can return negative HNR on noise)
             hnr_clamped = max(hnr, 0.01)
             nhr = 1.0 / hnr_clamped  # Noise-to-Harmonicity ratio
@@ -321,10 +330,9 @@ if PARSEL_AVAILABLE:
                 print(f"DEBUG [predict]: Legacy model prediction: val={val}, accuracy={accuracy:.1f}%")
 
             # ── FIX: Healthy override — tightened criteria ──────────────────
-            # Old: lj < 0.008 AND ls < 0.030 AND hnr > 20  (too easy to trigger)
-            # New: lj < 0.005 AND ls < 0.020 AND hnr > 24  (only for very clean audio)
+            # Pure tone or extremely clean audio fallback
             is_parkinson = (val == 1)
-            if lj < 0.005 and ls < 0.020 and hnr > 24:
+            if lj < 0.005 and ls < 0.020 and hnr >= 24.0:
                 print(f"DEBUG [predict]: Healthy override applied (very clean voice)")
                 is_parkinson = False
                 accuracy = max(accuracy, 88.0)
