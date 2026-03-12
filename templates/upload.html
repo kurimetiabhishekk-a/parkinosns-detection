@@ -548,16 +548,72 @@
 </div>
 
 <script>
+	// Audio processing/downsampling function for both recorded and uploaded files
+	function processAndCompressAudio(audioBlob, finalFileName) {
+		const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+		audioBlob.arrayBuffer().then(arrayBuffer => {
+			return audioCtx.decodeAudioData(arrayBuffer);
+		}).then(audioBuffer => {
+			const numOfChan = 1; // Force Mono
+			const length = audioBuffer.length * numOfChan * 2 + 44;
+			const buffer = new ArrayBuffer(length);
+			const view = new DataView(buffer);
+			let sample, offset = 0, pos = 0;
+
+			function setUint16(data) { view.setUint16(pos, data, true); pos += 2; }
+			function setUint32(data) { view.setUint32(pos, data, true); pos += 4; }
+
+			setUint32(0x46464952); // "RIFF"
+			setUint32(length - 8); // file length - 8
+			setUint32(0x45564157); // "WAVE"
+			setUint32(0x20746d66); // "fmt " chunk
+			setUint32(16); // length = 16
+			setUint16(1); // PCM (uncompressed)
+			setUint16(numOfChan);
+			setUint32(audioBuffer.sampleRate);
+			setUint32(audioBuffer.sampleRate * 2 * numOfChan); // avg. bytes/sec
+			setUint16(numOfChan * 2); // block-align
+			setUint16(16); // 16-bit
+			setUint32(0x61746164); // "data" - chunk
+			setUint32(length - pos - 4); // chunk length
+
+			// Only take the first channel (mono)
+			const channelData = audioBuffer.getChannelData(0);
+
+			while (pos < length) {
+				sample = Math.max(-1, Math.min(1, channelData[offset]));
+				sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
+				view.setInt16(pos, sample, true);
+				pos += 2;
+				offset++;
+			}
+			
+			const finalWavBlob = new Blob([buffer], { type: "audio/wav" });
+			const reader = new FileReader();
+			reader.readAsDataURL(finalWavBlob);
+			reader.onloadend = function () {
+				document.getElementById('audioBase64').value = reader.result;
+				try {
+					const file = new File([finalWavBlob], finalFileName, { type: 'audio/wav' });
+					const dt = new DataTransfer();
+					dt.items.add(file);
+					document.getElementById('audioInput').files = dt.files;
+				} catch (e) { }
+				updateUploadUI(finalFileName);
+			}
+		}).catch(err => {
+			console.error("Audio Conversion Error:", err);
+			alert("An error occurred formatting the audio. Please try again.");
+		});
+	}
+
 	// Audio file update visually
 	document.getElementById('audioInput').addEventListener('change', function (e) {
 		if (this.files && this.files.length > 0) {
 			const file = this.files[0];
-			const reader = new FileReader();
-			reader.readAsDataURL(file);
-			reader.onloadend = function () {
-				document.getElementById('audioBase64').value = reader.result;
-			}
-			updateUploadUI(file.name);
+			let safeName = file.name;
+			if (!safeName.toLowerCase().endsWith('.wav')) { safeName += ".wav"; }
+			processAndCompressAudio(file, safeName);
 		}
 	});
 
@@ -606,14 +662,9 @@
 		unhighlight();
 		if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
 			const file = e.dataTransfer.files[0];
-			document.getElementById('audioInput').files = e.dataTransfer.files;
-
-			const reader = new FileReader();
-			reader.readAsDataURL(file);
-			reader.onloadend = function () {
-				document.getElementById('audioBase64').value = reader.result;
-			}
-			updateUploadUI(file.name);
+			let safeName = file.name;
+			if (!safeName.toLowerCase().endsWith('.wav')) { safeName += ".wav"; }
+			processAndCompressAudio(file, safeName);
 		}
 	});
 
@@ -680,63 +731,7 @@
 						stream.getTracks().forEach(track => track.stop());
 
 						const audioBlob = new Blob(audioChunks); // Browser native format (likely webm/opus)
-						
-						// Decode native recording and automatically downsample to 16kHz Mono to save bandwidth
-						const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-						audioBlob.arrayBuffer().then(arrayBuffer => {
-							return audioCtx.decodeAudioData(arrayBuffer);
-						}).then(audioBuffer => {
-							const numOfChan = 1; // Force Mono
-							const length = audioBuffer.length * numOfChan * 2 + 44;
-							const buffer = new ArrayBuffer(length);
-							const view = new DataView(buffer);
-							let sample, offset = 0, pos = 0;
-
-							function setUint16(data) { view.setUint16(pos, data, true); pos += 2; }
-							function setUint32(data) { view.setUint32(pos, data, true); pos += 4; }
-
-							setUint32(0x46464952); // "RIFF"
-							setUint32(length - 8); // file length - 8
-							setUint32(0x45564157); // "WAVE"
-							setUint32(0x20746d66); // "fmt " chunk
-							setUint32(16); // length = 16
-							setUint16(1); // PCM (uncompressed)
-							setUint16(numOfChan);
-							setUint32(audioBuffer.sampleRate);
-							setUint32(audioBuffer.sampleRate * 2 * numOfChan); // avg. bytes/sec
-							setUint16(numOfChan * 2); // block-align
-							setUint16(16); // 16-bit
-							setUint32(0x61746164); // "data" - chunk
-							setUint32(length - pos - 4); // chunk length
-
-							// Only take the first channel (mono)
-							const channelData = audioBuffer.getChannelData(0);
-
-							while (pos < length) {
-								sample = Math.max(-1, Math.min(1, channelData[offset]));
-								sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
-								view.setInt16(pos, sample, true);
-								pos += 2;
-								offset++;
-							}
-							
-							const finalWavBlob = new Blob([buffer], { type: "audio/wav" });
-							const reader = new FileReader();
-							reader.readAsDataURL(finalWavBlob);
-							reader.onloadend = function () {
-								document.getElementById('audioBase64').value = reader.result;
-								try {
-									const file = new File([finalWavBlob], "recorded_voice_sample.wav", { type: 'audio/wav' });
-									const dt = new DataTransfer();
-									dt.items.add(file);
-									document.getElementById('audioInput').files = dt.files;
-								} catch (e) { }
-								updateUploadUI('recorded_voice_sample.wav');
-							}
-						}).catch(err => {
-							console.error("Audio Conversion Error:", err);
-							alert("An error occurred formatting the audio. Please try again.");
-						});
+						processAndCompressAudio(audioBlob, 'recorded_voice_sample.wav');
 					};
 				};
 
