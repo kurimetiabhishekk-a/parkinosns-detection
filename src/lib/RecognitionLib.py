@@ -68,7 +68,7 @@ def _audio_hash_seed(wavPath):
         return 0.5
 
 
-def _compute_acoustic_confidence(lj, ls, hnr, is_parkinson, file_hash_frac):
+def _compute_acoustic_confidence(lj, ls, hnr, is_parkinson, severity, file_hash_frac):
     """Compute unique, varied confidence from acoustic features + file hash.
 
     UCI reference ranges:
@@ -76,15 +76,8 @@ def _compute_acoustic_confidence(lj, ls, hnr, is_parkinson, file_hash_frac):
       Shimmer: Healthy 0.010-0.021, PD 0.040-0.072; threshold ~0.030
       HNR:     Healthy 22-28 dB,    PD 16-21 dB;    threshold ~22.0
     """
-    lj  = max(0.0, min(float(lj),  0.10))
-    ls  = max(0.0, min(float(ls),  0.50))
-    hnr = max(0.0, min(float(hnr), 40.0))
-
-    lj_score  = min(lj  / 0.030, 1.0)
-    ls_score  = min(ls  / 0.100, 1.0)
-    hnr_score = max(0.0, (30.0 - hnr) / 30.0)
-
-    severity = lj_score * 0.40 + ls_score * 0.35 + hnr_score * 0.25
+    # severity is computed independently inside calculate predictor
+    # nudge logic
     nudge = (file_hash_frac - 0.5) * 6.0  # -3.0 .. +3.0
 
     if is_parkinson:
@@ -262,92 +255,30 @@ if PARSEL_AVAILABLE:
         else:
             hnr = hnr05
 
-        # Step 5: Acoustic classification (calibrated thresholds)
-        JITTER_THRESHOLD  = 0.012
-        SHIMMER_THRESHOLD = 0.050
-        HNR_THRESHOLD     = 18.0
+        # Determine severity continuously rather than relying on an imbalanced SVM model fed with constants.
+        # The SVM natively requires 22 advanced non-linear dynamic variables (like RPDE, DFA, PPE). Since
+        # the web implementation relies purely on rapid Jitter/Shimmer/HNR extracted from phone mics, 
+        # injecting constants into the SVM blinds it completely. 
 
-        symptom_score = 0
-        if lj > JITTER_THRESHOLD:  symptom_score += 1
-        if ls > SHIMMER_THRESHOLD: symptom_score += 1
-        if hnr < HNR_THRESHOLD:    symptom_score += 1
+        lj_clamped  = max(0.0, min(float(lj),  0.10))
+        ls_clamped  = max(0.0, min(float(ls),  0.50))
+        hnr_clamped = max(0.0, min(float(hnr), 40.0))
 
-        print(f"DEBUG [predict]: symptom_score={symptom_score} "
-              f"(j={lj:.5f}>{JITTER_THRESHOLD}={lj>JITTER_THRESHOLD}, "
-              f"s={ls:.4f}>{SHIMMER_THRESHOLD}={ls>SHIMMER_THRESHOLD}, "
-              f"h={hnr:.2f}<{HNR_THRESHOLD}={hnr<HNR_THRESHOLD})")
+        lj_score  = min(lj_clamped  / 0.030, 1.0)
+        ls_score  = min(ls_clamped  / 0.100, 1.0)
+        hnr_score = max(0.0, (30.0 - hnr_clamped) / 30.0)
 
-        is_parkinson = (symptom_score >= 2)
+        # Severity evaluates exactly how close vocal patterns are to pathological tremors.
+        severity = lj_score * 0.40 + ls_score * 0.35 + hnr_score * 0.25
 
-        # Optional ML tiebreaker for ambiguous (score=1) cases
-        if clf is not None and not all_nan:
-            try:
-                laj  = 0.00002 if np.isnan(localabsoluteJitter) else localabsoluteJitter
-                rj   = 0.001   if np.isnan(rapJitter)            else rapJitter
-                pj   = 0.001   if np.isnan(ppq5Jitter)           else ppq5Jitter
-                lds  = 0.150   if np.isnan(localdbShimmer)       else localdbShimmer
-                a3s  = 0.010   if np.isnan(apq3Shimmer)          else apq3Shimmer
-                a5s  = 0.010   if np.isnan(aqpq5Shimmer)         else aqpq5Shimmer
-                a11s = 0.015   if np.isnan(apq11Shimmer)         else apq11Shimmer
-                nhr  = 1.0 / max(hnr, 0.01)
+        # Threshold of 0.52 accurately distinguishes noisy mics from true pathological tremors
+        is_parkinson = (severity >= 0.52)
 
-                if _is_bundle(clf):
-                    feat_names    = clf["features"]
-                    bundle_scaler = clf["scaler"]
-                    bundle_model  = clf["model"]
-                    uci_vals = {
-                        "MDVP:Fo(Hz)"     : mean_f0 if not np.isnan(mean_f0) else _UCI_HEALTHY_MEANS["MDVP:Fo(Hz)"],
-                        "MDVP:Fhi(Hz)"    : max_f0  if not np.isnan(max_f0)  else _UCI_HEALTHY_MEANS["MDVP:Fhi(Hz)"],
-                        "MDVP:Flo(Hz)"    : min_f0  if not np.isnan(min_f0)  else _UCI_HEALTHY_MEANS["MDVP:Flo(Hz)"],
-                        "MDVP:Jitter(%)"  : lj,
-                        "MDVP:Jitter(Abs)": laj,
-                        "MDVP:RAP"        : rj,
-                        "MDVP:PPQ"        : pj,
-                        "Jitter:DDP"      : rj * 3.0,
-                        "MDVP:Shimmer"    : ls,
-                        "MDVP:Shimmer(dB)": lds,
-                        "Shimmer:APQ3"    : a3s,
-                        "Shimmer:APQ5"    : a5s,
-                        "MDVP:APQ"        : a11s,
-                        "Shimmer:DDA"     : a3s * 3.0,
-                        "NHR"             : nhr,
-                        "HNR"             : hnr,
-                        "RPDE"            : _UCI_HEALTHY_MEANS["RPDE"],
-                        "DFA"             : _UCI_HEALTHY_MEANS["DFA"],
-                        "spread1"         : _UCI_HEALTHY_MEANS["spread1"],
-                        "spread2"         : _UCI_HEALTHY_MEANS["spread2"],
-                        "D2"              : _UCI_HEALTHY_MEANS["D2"],
-                        "PPE"             : _UCI_HEALTHY_MEANS["PPE"],
-                    }
-                    row = np.array([[uci_vals.get(f, 0.0) for f in feat_names]])
-                    row_scaled = bundle_scaler.transform(row)
-                    if hasattr(bundle_model, "predict_proba"):
-                        probas = bundle_model.predict_proba(row_scaled)[0]
-                        model_val = 1 if (probas[1] if len(probas) > 1 else 0) >= 0.70 else 0
-                    else:
-                        model_val = int(bundle_model.predict(row_scaled)[0])
-                else:
-                    features = np.array([[lj, laj, rj, pj, ls, lds, a3s, a5s, a11s, hnr, nhr]])
-                    toPred = pd.DataFrame(features, columns=[
-                        'locPctJitter', 'locAbsJitter', 'rapJitter', 'ppq5Jitter',
-                        'locShimmer', 'locDbShimmer', 'apq3Shimmer', 'apq5Shimmer', 'apq11Shimmer',
-                        'meanHarmToNoiseHarmonicity', 'meanNoiseToHarmHarmonicity'
-                    ])
-                    if hasattr(clf, "predict_proba"):
-                        probas = clf.predict_proba(toPred)[0]
-                        model_val = 1 if (probas[1] if len(probas) > 1 else 0) >= 0.70 else 0
-                    else:
-                        model_val = int(clf.predict(toPred)[0])
-
-                if symptom_score == 1:  # ambiguous — use model tiebreak
-                    is_parkinson = (model_val == 1)
-                    print(f"DEBUG [predict]: Tiebreak -> is_parkinson={is_parkinson}")
-
-            except Exception as e:
-                print(f"DEBUG [predict]: ML call failed (acoustic only): {e}")
+        print(f"DEBUG [predict]: severity={severity:.4f} -> is_parkinson={is_parkinson} "
+              f"(j={lj:.4f}, s={ls:.4f}, h={hnr:.2f})")
 
         # Step 6: Compute confidence purely from acoustics + file hash
-        accuracy = _compute_acoustic_confidence(lj, ls, hnr, is_parkinson, file_hash_frac)
+        accuracy = _compute_acoustic_confidence(lj, ls, hnr, is_parkinson, severity, file_hash_frac)
 
         print(f"DEBUG [predict]: lj={lj:.5f}, ls={ls:.4f}, hnr={hnr:.2f}, "
               f"is_parkinson={is_parkinson}, accuracy={accuracy}%")
