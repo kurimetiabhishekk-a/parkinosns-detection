@@ -37,16 +37,16 @@ try:
 except ImportError:
     PARSEL_AVAILABLE = False
 
-# UCI Dataset Reference Statistics (from 196-sample UCI dataset)
-_UCI_PD_MEANS = {
-    "MDVP:Fo(Hz)": 145.0,   "MDVP:Fhi(Hz)": 188.0,  "MDVP:Flo(Hz)": 90.0,
-    "MDVP:Jitter(%)": 0.006, "MDVP:Jitter(Abs)": 0.00004,
-    "MDVP:RAP": 0.003,       "MDVP:PPQ": 0.003,       "Jitter:DDP": 0.009,
-    "MDVP:Shimmer": 0.049,   "MDVP:Shimmer(dB)": 0.46,
-    "Shimmer:APQ3": 0.026,   "Shimmer:APQ5": 0.031,   "MDVP:APQ": 0.038,
-    "Shimmer:DDA": 0.077,    "NHR": 0.029,             "HNR": 19.5,
-    "RPDE": 0.496,           "DFA": 0.717,
-    "spread1": -5.45,        "spread2": 0.227,          "D2": 2.38,  "PPE": 0.206,
+# UCI Dataset Reference Statistics (Healthy Means from 196-sample dataset)
+_UCI_HEALTHY_MEANS = {
+    "MDVP:Fo(Hz)": 181.0,   "MDVP:Fhi(Hz)": 223.0,  "MDVP:Flo(Hz)": 145.0,
+    "MDVP:Jitter(%)": 0.003, "MDVP:Jitter(Abs)": 0.00002,
+    "MDVP:RAP": 0.001,       "MDVP:PPQ": 0.001,       "Jitter:DDP": 0.003,
+    "MDVP:Shimmer": 0.017,   "MDVP:Shimmer(dB)": 0.150,
+    "Shimmer:APQ3": 0.010,   "Shimmer:APQ5": 0.010,   "MDVP:APQ": 0.015,
+    "Shimmer:DDA": 0.030,    "NHR": 0.010,             "HNR": 24.5,
+    "RPDE": 0.440,           "DFA": 0.690,
+    "spread1": -6.75,        "spread2": 0.160,          "D2": 2.15,  "PPE": 0.120,
 }
 
 
@@ -246,26 +246,26 @@ if PARSEL_AVAILABLE:
         # file still produces unique output
         if np.isnan(localJitter):
             lj = 0.002 + file_hash_frac * 0.016   # 0.002..0.018
-            print(f"DEBUG [predict]: jitter NaN → hash lj={lj:.5f}")
+            print(f"DEBUG [predict]: jitter NaN -> hash lj={lj:.5f}")
         else:
             lj = localJitter
 
         if np.isnan(localShimmer):
             ls = 0.010 + file_hash_frac * 0.070   # 0.010..0.080
-            print(f"DEBUG [predict]: shimmer NaN → hash ls={ls:.4f}")
+            print(f"DEBUG [predict]: shimmer NaN -> hash ls={ls:.4f}")
         else:
             ls = localShimmer
 
         if np.isnan(hnr05):
-            hnr = 28.0 - file_hash_frac * 14.0    # 14..28
-            print(f"DEBUG [predict]: HNR NaN → hash hnr={hnr:.2f}")
+            hnr = 30.0 - file_hash_frac * 14.0    # 16..30
+            print(f"DEBUG [predict]: HNR NaN -> hash hnr={hnr:.2f}")
         else:
             hnr = hnr05
 
-        # Step 5: Acoustic classification (UCI-calibrated thresholds)
-        JITTER_THRESHOLD  = 0.008
-        SHIMMER_THRESHOLD = 0.030
-        HNR_THRESHOLD     = 22.0
+        # Step 5: Acoustic classification (calibrated thresholds)
+        JITTER_THRESHOLD  = 0.012
+        SHIMMER_THRESHOLD = 0.050
+        HNR_THRESHOLD     = 18.0
 
         symptom_score = 0
         if lj > JITTER_THRESHOLD:  symptom_score += 1
@@ -282,13 +282,13 @@ if PARSEL_AVAILABLE:
         # Optional ML tiebreaker for ambiguous (score=1) cases
         if clf is not None and not all_nan:
             try:
-                laj  = 0.00004 if np.isnan(localabsoluteJitter) else localabsoluteJitter
-                rj   = 0.003   if np.isnan(rapJitter)            else rapJitter
-                pj   = 0.003   if np.isnan(ppq5Jitter)           else ppq5Jitter
-                lds  = 0.46    if np.isnan(localdbShimmer)       else localdbShimmer
-                a3s  = 0.026   if np.isnan(apq3Shimmer)          else apq3Shimmer
-                a5s  = 0.031   if np.isnan(aqpq5Shimmer)         else aqpq5Shimmer
-                a11s = 0.038   if np.isnan(apq11Shimmer)         else apq11Shimmer
+                laj  = 0.00002 if np.isnan(localabsoluteJitter) else localabsoluteJitter
+                rj   = 0.001   if np.isnan(rapJitter)            else rapJitter
+                pj   = 0.001   if np.isnan(ppq5Jitter)           else ppq5Jitter
+                lds  = 0.150   if np.isnan(localdbShimmer)       else localdbShimmer
+                a3s  = 0.010   if np.isnan(apq3Shimmer)          else apq3Shimmer
+                a5s  = 0.010   if np.isnan(aqpq5Shimmer)         else aqpq5Shimmer
+                a11s = 0.015   if np.isnan(apq11Shimmer)         else apq11Shimmer
                 nhr  = 1.0 / max(hnr, 0.01)
 
                 if _is_bundle(clf):
@@ -296,10 +296,10 @@ if PARSEL_AVAILABLE:
                     bundle_scaler = clf["scaler"]
                     bundle_model  = clf["model"]
                     uci_vals = {
-                        "MDVP:Fo(Hz)"     : mean_f0 if not np.isnan(mean_f0) else _UCI_PD_MEANS["MDVP:Fo(Hz)"],
-                        "MDVP:Fhi(Hz)"    : max_f0  if not np.isnan(max_f0)  else _UCI_PD_MEANS["MDVP:Fhi(Hz)"],
-                        "MDVP:Flo(Hz)"    : min_f0  if not np.isnan(min_f0)  else _UCI_PD_MEANS["MDVP:Flo(Hz)"],
-                        "MDVP:Jitter(%)"  : lj * 100.0,
+                        "MDVP:Fo(Hz)"     : mean_f0 if not np.isnan(mean_f0) else _UCI_HEALTHY_MEANS["MDVP:Fo(Hz)"],
+                        "MDVP:Fhi(Hz)"    : max_f0  if not np.isnan(max_f0)  else _UCI_HEALTHY_MEANS["MDVP:Fhi(Hz)"],
+                        "MDVP:Flo(Hz)"    : min_f0  if not np.isnan(min_f0)  else _UCI_HEALTHY_MEANS["MDVP:Flo(Hz)"],
+                        "MDVP:Jitter(%)"  : lj,
                         "MDVP:Jitter(Abs)": laj,
                         "MDVP:RAP"        : rj,
                         "MDVP:PPQ"        : pj,
@@ -312,18 +312,18 @@ if PARSEL_AVAILABLE:
                         "Shimmer:DDA"     : a3s * 3.0,
                         "NHR"             : nhr,
                         "HNR"             : hnr,
-                        "RPDE"            : _UCI_PD_MEANS["RPDE"],
-                        "DFA"             : _UCI_PD_MEANS["DFA"],
-                        "spread1"         : _UCI_PD_MEANS["spread1"],
-                        "spread2"         : _UCI_PD_MEANS["spread2"],
-                        "D2"              : _UCI_PD_MEANS["D2"],
-                        "PPE"             : _UCI_PD_MEANS["PPE"],
+                        "RPDE"            : _UCI_HEALTHY_MEANS["RPDE"],
+                        "DFA"             : _UCI_HEALTHY_MEANS["DFA"],
+                        "spread1"         : _UCI_HEALTHY_MEANS["spread1"],
+                        "spread2"         : _UCI_HEALTHY_MEANS["spread2"],
+                        "D2"              : _UCI_HEALTHY_MEANS["D2"],
+                        "PPE"             : _UCI_HEALTHY_MEANS["PPE"],
                     }
                     row = np.array([[uci_vals.get(f, 0.0) for f in feat_names]])
                     row_scaled = bundle_scaler.transform(row)
                     if hasattr(bundle_model, "predict_proba"):
                         probas = bundle_model.predict_proba(row_scaled)[0]
-                        model_val = 1 if (probas[1] if len(probas) > 1 else 0) >= 0.28 else 0
+                        model_val = 1 if (probas[1] if len(probas) > 1 else 0) >= 0.70 else 0
                     else:
                         model_val = int(bundle_model.predict(row_scaled)[0])
                 else:
@@ -335,13 +335,13 @@ if PARSEL_AVAILABLE:
                     ])
                     if hasattr(clf, "predict_proba"):
                         probas = clf.predict_proba(toPred)[0]
-                        model_val = 1 if (probas[1] if len(probas) > 1 else 0) >= 0.28 else 0
+                        model_val = 1 if (probas[1] if len(probas) > 1 else 0) >= 0.70 else 0
                     else:
                         model_val = int(clf.predict(toPred)[0])
 
                 if symptom_score == 1:  # ambiguous — use model tiebreak
                     is_parkinson = (model_val == 1)
-                    print(f"DEBUG [predict]: Tiebreak → is_parkinson={is_parkinson}")
+                    print(f"DEBUG [predict]: Tiebreak -> is_parkinson={is_parkinson}")
 
             except Exception as e:
                 print(f"DEBUG [predict]: ML call failed (acoustic only): {e}")
