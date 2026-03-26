@@ -318,16 +318,17 @@ else:
 
             print(f"DEBUG [predict-librosa]: amplitude_cv={amplitude_cv:.3f}, zcr_std={zcr_std:.4f}, hash={file_hash_frac:.4f}")
 
-            symptom_score = 0
-            if amplitude_cv > 0.45: symptom_score += 1
-            if zcr_std > 0.08:      symptom_score += 1
-            is_parkinson = (symptom_score >= 1)
-
             lj_proxy  = min(zcr_std / 0.15, 1.0) * 0.030
             ls_proxy  = min(amplitude_cv / 0.60, 1.0) * 0.100
             hnr_proxy = max(14.0, 28.0 - amplitude_cv * 14.0)
 
-            accuracy = _compute_acoustic_confidence(lj_proxy, ls_proxy, hnr_proxy, is_parkinson, file_hash_frac)
+            lj_score = lj_proxy / 0.030
+            ls_score = ls_proxy / 0.100
+            hnr_score = max(0.0, (30.0 - hnr_proxy) / 30.0)
+            severity = lj_score * 0.40 + ls_score * 0.35 + hnr_score * 0.25
+
+            is_parkinson = (severity >= 0.52)
+            accuracy = _compute_acoustic_confidence(lj_proxy, ls_proxy, hnr_proxy, is_parkinson, severity, file_hash_frac)
 
             if is_parkinson:
                 return 'Parkinson', "Potential vocal indicators observed.", accuracy

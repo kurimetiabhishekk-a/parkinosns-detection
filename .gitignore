@@ -12,3 +12,6 @@ DataSet/
 archive_extracted/
 node_modules/
 .env
+
+# Admin page — local only, never push to git
+templates/admin.html

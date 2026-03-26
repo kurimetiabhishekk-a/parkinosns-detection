@@ -20,14 +20,17 @@ tensorflow-cpu
 # ─── Audio / Voice Analysis ────────────────────────────────────
 praat-parselmouth
 librosa
+soundfile
 
-# ─── Dataset Download ──────────────────────────────────────────
-kaggle
+# ─── Database & Auth ───────────────────────────────────────────
+pymongo[srv]
+google-auth
 
 # ─── Utilities ─────────────────────────────────────────────────
 python-dateutil
 requests
 python-dotenv
 cryptography
-pymongo[srv]
-google-auth
+
+# ─── Dev / Dataset Download (not needed on production) ─────────
+# kaggle
