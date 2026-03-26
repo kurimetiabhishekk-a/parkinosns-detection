@@ -462,7 +462,7 @@
                 </div>
                 <div class="stat-chip">
                     <div class="stat-value"
-                        style="color: {{ '#16a34a' if final == 'Healthy' else ('#d97706' if 'Further' in final else '#dc2626') }}; font-size:16px;">
+                        style="color: {{ '#16a34a' if final == 'Healthy (Low Risk)' else ('#d97706' if 'Further' in final or 'Potential' in final else '#dc2626') }}; font-size:16px;">
                         {{ final }}
                     </div>
                     <div class="stat-label">Final Assessment</div>
@@ -486,6 +486,77 @@
                 neurologist.
             </div>
             {% endif %}
+
+            <!-- ─── Persistent Test History Table ─── -->
+            <div style="margin-top:32px;">
+                <div class="rtb-label" style="margin-bottom:16px;">All Previous Test Results</div>
+
+                {% if test_history and test_history|length > 0 %}
+                <div style="overflow-x:auto;">
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Date &amp; Time</th>
+                                <th>Test Type</th>
+                                <th>Result</th>
+                                <th>Status</th>
+                                <th>Confidence</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in test_history %}
+                            <tr>
+                                <td style="color:#94a3b8; font-size:12px;">{{ loop.index }}</td>
+                                <td style="font-size:12.5px; color:#64748b;">{{ entry.date }}</td>
+                                <td>
+                                    {% if entry.type == 'voice' %}
+                                    <span style="display:inline-flex;align-items:center;gap:5px;background:#ede9fe;color:#7c3aed;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">
+                                        <i class="fas fa-microphone"></i> Voice
+                                    </span>
+                                    {% else %}
+                                    <span style="display:inline-flex;align-items:center;gap:5px;background:#e0f2fe;color:#0369a1;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">
+                                        <i class="fas fa-pencil-alt"></i> Drawing
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td style="font-size:13px; color:#334155; max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ entry.result }}</td>
+                                <td>
+                                    {% if entry.label == 'Parkinson' %}
+                                    <span style="display:inline-flex;align-items:center;gap:5px;background:#fef2f2;color:#dc2626;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;border:1px solid #fecaca;">
+                                        <i class="fas fa-exclamation-circle"></i> Weak
+                                    </span>
+                                    {% else %}
+                                    <span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#16a34a;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;border:1px solid #bbf7d0;">
+                                        <i class="fas fa-check-circle"></i> Healthy
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if entry.accuracy %}
+                                    <div style="display:flex;align-items:center;gap:8px;">
+                                        <div style="flex:1;height:5px;background:#e2e8f0;border-radius:4px;min-width:60px;">
+                                            <div style="height:100%;border-radius:4px;width:{{ entry.accuracy }}%;background:{{ 'linear-gradient(90deg,#22c55e,#16a34a)' if entry.label != 'Parkinson' else 'linear-gradient(90deg,#f87171,#dc2626)' }};"></div>
+                                        </div>
+                                        <span style="font-size:12px;font-weight:700;color:#6366f1;">{{ entry.accuracy }}%</span>
+                                    </div>
+                                    {% else %}
+                                    <span style="color:#94a3b8;font-size:12px;">—</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-clipboard-list"></i>
+                    <p>No test results yet.</p>
+                    <p style="font-size:13px;margin-top:6px;">Complete a Drawing or Voice test to see your history here.</p>
+                </div>
+                {% endif %}
+            </div>
 
             <!-- Medical Disclaimer -->
             <div class="disclaimer">

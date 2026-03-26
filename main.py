@@ -365,9 +365,23 @@ def dashboard():
         final = 'Further Diagnosis Required'
 
     now_date = datetime.now().strftime("%d %B %Y, %H:%M")
+
+    # Load persistent test history from MongoDB for this user
+    test_history = []
+    try:
+        col = get_users_collection()
+        if col is not None and 'user_email' in session:
+            user_doc = col.find_one({'email': session['user_email']}, {'test_history': 1})
+            if user_doc and 'test_history' in user_doc:
+                # Return most-recent first, limit to last 20 entries
+                test_history = list(reversed(user_doc['test_history'][-20:]))
+    except Exception as e:
+        print(f"DEBUG: Failed to load test history: {e}")
+
     return render_template('dashboard.html',
                            pred=pred, voice_pred=voicePred,
-                           final=final, now_date=now_date)
+                           final=final, now_date=now_date,
+                           test_history=test_history)
 
 
 # ── Spiral/Image Test ─────────────────────────────────────────────────────────
@@ -401,6 +415,22 @@ def image_test():
     label, result, suggestion, accuracy = predictImg(r'static/img/test.jpg')
     if label is not None:
         session['pred'] = label
+        # Persist drawing result to MongoDB per user
+        try:
+            col = get_users_collection()
+            if col is not None and 'user_email' in session:
+                col.update_one(
+                    {'email': session['user_email']},
+                    {'$push': {'test_history': {
+                        'type': 'drawing',
+                        'label': label,
+                        'result': result,
+                        'accuracy': float(accuracy) if accuracy else None,
+                        'date': datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+                    }}}
+                )
+        except Exception as e:
+            print(f"DEBUG: Failed to save drawing result to DB: {e}")
     return render_template('image_test.html', label=label, result=result, suggestion=suggestion, confidence=accuracy)
 
 
@@ -444,10 +474,28 @@ def upload():
                 if len(voice_result) == 2:
                     _, msg = voice_result
                     return render_template('upload.html', mgs=msg, accuracy=None)
-                
+
                 # Default unpack for 3 values
                 label, result, accuracy = voice_result
                 session['voicePred'] = label
+
+                # Persist voice result to MongoDB per user
+                try:
+                    col = get_users_collection()
+                    if col is not None and 'user_email' in session:
+                        col.update_one(
+                            {'email': session['user_email']},
+                            {'$push': {'test_history': {
+                                'type': 'voice',
+                                'label': label,
+                                'result': result,
+                                'accuracy': float(accuracy) if accuracy else None,
+                                'date': datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+                            }}}
+                        )
+                except Exception as e:
+                    print(f"DEBUG: Failed to save voice result to DB: {e}")
+
                 return render_template('upload.html', label=label, mgs=result, accuracy=accuracy)
 
             except Exception as e:
@@ -532,5 +580,38 @@ def add_header(response):
     return response
 
 
+# ── Admin Panel ───────────────────────────────────────────────────────────────
+ADMIN_EMAIL = (os.environ.get('ADMIN_EMAIL') or 'abhishekkurimeti97@gmail.com').strip().lower()
+
+@app.route('/admin')
+@login_required
+def admin_panel():
+    """Admin-only page: shows all registered users."""
+    current_email = session.get('user_email', '').strip().lower()
+    if current_email != ADMIN_EMAIL:
+        return render_template('login.html',
+                               error="Access denied. Admin privileges required.",
+                               google_client_id=os.environ.get('GOOGLE_CLIENT_ID')), 403
+
+    try:
+        col = get_users_collection()
+        if col is None:
+            return render_template('admin.html', users=[], error="Database unavailable.")
+
+        raw_users = list(col.find({}, {'_id': 0, 'password': 0}))
+        users = []
+        for u in raw_users:
+            users.append({
+                'name':  decrypt_data(u.get('name', '')),
+                'email': u.get('email', ''),
+                'date':  u.get('date', 'N/A'),
+            })
+        return render_template('admin.html', users=users, total=len(users))
+    except Exception as e:
+        print(f"DEBUG: Admin panel error: {e}")
+        return render_template('admin.html', users=[], error=str(e))
+
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
+
