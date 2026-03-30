@@ -162,10 +162,6 @@ if PARSEL_AVAILABLE:
         print(f"\n{'='*60}")
         print(f"DEBUG [predict]: Starting voice analysis for {wavPath}")
 
-        # Step 1: hash for per-file uniqueness
-        file_hash_frac = _audio_hash_seed(wavPath)
-        print(f"DEBUG [predict]: file_hash_frac={file_hash_frac:.4f}")
-
         temp_wav = wavPath + ".fixed.wav"
         sound = None
 
@@ -201,9 +197,7 @@ if PARSEL_AVAILABLE:
                     pass
 
         if sound is None:
-            # Even with no audio, return a hash-based result
-            acc = round(60.0 + file_hash_frac * 20.0, 2)
-            return 'Healthy', "Could not read audio. Please upload a standard .WAV file.", acc
+            return 'Healthy', "Could not read audio. Please upload a standard .WAV file.", 60.0
 
         # Step 3: Extract features
         print("DEBUG [predict]: Extracting Praat features...")
@@ -215,23 +209,23 @@ if PARSEL_AVAILABLE:
 
         all_nan = np.isnan(localJitter) and np.isnan(localShimmer) and np.isnan(hnr05)
 
-        # Step 4: Resolve values — use hash-derived defaults when NaN so every
-        # file still produces unique output
+        # Step 4: Resolve values — fall back to UCI healthy-class means when NaN
+        # (UCI healthy means: jitter~0.003, shimmer~0.017, HNR~24.5)
         if np.isnan(localJitter):
-            lj = 0.002 + file_hash_frac * 0.016   # 0.002..0.018
-            print(f"DEBUG [predict]: jitter NaN -> hash lj={lj:.5f}")
+            lj = 0.003   # UCI healthy mean
+            print(f"DEBUG [predict]: jitter NaN -> UCI healthy mean lj={lj:.5f}")
         else:
             lj = localJitter
 
         if np.isnan(localShimmer):
-            ls = 0.010 + file_hash_frac * 0.070   # 0.010..0.080
-            print(f"DEBUG [predict]: shimmer NaN -> hash ls={ls:.4f}")
+            ls = 0.017   # UCI healthy mean
+            print(f"DEBUG [predict]: shimmer NaN -> UCI healthy mean ls={ls:.4f}")
         else:
             ls = localShimmer
 
         if np.isnan(hnr05):
-            hnr = 30.0 - file_hash_frac * 14.0    # 16..30
-            print(f"DEBUG [predict]: HNR NaN -> hash hnr={hnr:.2f}")
+            hnr = 24.5   # UCI healthy mean
+            print(f"DEBUG [predict]: HNR NaN -> UCI healthy mean hnr={hnr:.2f}")
         else:
             hnr = hnr05
 
@@ -279,7 +273,6 @@ else:
         """Deterministic fallback using librosa amplitude/ZCR + file hash."""
         try:
             print(f"DEBUG [predict-librosa]: Librosa-only fallback for {wavPath}")
-            file_hash_frac = _audio_hash_seed(wavPath)
 
             y, sr = librosa.load(wavPath, sr=16000, mono=True, duration=5.0)
             if len(y) < 800:
