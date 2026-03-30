@@ -767,14 +767,25 @@
 	}
 
 	// ── Vowel-only validation via Web Speech API ──────────────────────────────
-	// Valid inputs: sustained vowel sounds only (English: a e i o u)
+	// Valid inputs: ONLY sustained English vowel sounds (A / E / I / O / U).
+	// Filler sounds like "uh", "aah", "eh" are intentionally excluded.
 	const VOWEL_WORDS = new Set([
-		'a','ah','aah','ahh','ay','ei',
-		'e','ee','eh','eeh',
-		'i','ii','iii','eye',
-		'o','oh','oo','ooh','ohh',
-		'u','uu','uuu','uh','uhh'
+		'a', 'ah', 'ahh',          // A — "Ahhh"
+		'e', 'ee',                  // E — "Eee"
+		'i', 'ii', 'iii',          // I — "Iii"
+		'o', 'oh', 'oo', 'ooh', 'ohh',  // O — "Ohh"
+		'u', 'uu', 'uuu'            // U — "Uuu"
 	]);
+
+	// Vowel characters — a word containing NONE of these is definitely not a vowel sound
+	const VOWEL_CHARS = new Set(['a','e','i','o','u']);
+
+	function hasVowelChar(word) {
+		for (const ch of word) {
+			if (VOWEL_CHARS.has(ch)) return true;
+		}
+		return false;
+	}
 
 	let speechViolation = false;  // set true if non-vowel detected during recording
 	let recognition = null;
@@ -795,9 +806,17 @@
 					const words = transcript.split(/\s+/);
 					for (const word of words) {
 						const clean = word.replace(/[^a-z]/g, '');
-						if (clean && !VOWEL_WORDS.has(clean)) {
+						if (!clean) continue; // skip empty tokens
+						// Reject immediately if the word has no vowel letters at all
+						if (!hasVowelChar(clean)) {
 							speechViolation = true;
-							console.warn('Non-vowel detected:', clean);
+							console.warn('Non-vowel (no vowel chars) detected:', clean);
+							continue;
+						}
+						// Reject if word is not in the approved vowel-sound list
+						if (!VOWEL_WORDS.has(clean)) {
+							speechViolation = true;
+							console.warn('Non-vowel word detected:', clean);
 						}
 					}
 				}
