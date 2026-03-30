@@ -426,7 +426,15 @@
 
 			<div class="instruction-strip">
 				<i class="fas fa-info-circle"></i>
-				For best results, upload clean audio of sustained 'ah' or 'o' sounds.
+				<span>Sustain an English vowel sound: <strong>"Ahhh"</strong>, <strong>"Eee"</strong>, <strong>"Iii"</strong>, <strong>"Ohh"</strong>, or <strong>"Uuu"</strong> for 3–5 seconds. Other sounds will be rejected.</span>
+			</div>
+			<!-- Vowel hint pills -->
+			<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
+				<span style="background:#ede9fe;color:#7c3aed;border-radius:50px;padding:5px 16px;font-size:13px;font-weight:700;">A &mdash; "Ahhh"</span>
+				<span style="background:#ede9fe;color:#7c3aed;border-radius:50px;padding:5px 16px;font-size:13px;font-weight:700;">E &mdash; "Eee"</span>
+				<span style="background:#ede9fe;color:#7c3aed;border-radius:50px;padding:5px 16px;font-size:13px;font-weight:700;">I &mdash; "Iii"</span>
+				<span style="background:#ede9fe;color:#7c3aed;border-radius:50px;padding:5px 16px;font-size:13px;font-weight:700;">O &mdash; "Ohh"</span>
+				<span style="background:#ede9fe;color:#7c3aed;border-radius:50px;padding:5px 16px;font-size:13px;font-weight:700;">U &mdash; "Uuu"</span>
 			</div>
 
 			<div class="canvas-wrap" style="flex-direction: column; display: flex;">
@@ -711,20 +719,33 @@
 					isRecording = true;
 					recordBtn.classList.add('recording');
 					recordBtnText.textContent = 'Stop Recording';
+					startVowelWatch(); // begin listening for non-vowel speech
 
 					let duration = 0;
-					recordStatus.textContent = `Recording: ${duration}s`;
+					recordStatus.textContent = `Recording: ${duration}s — say "Ahhh" or a vowel sound`;
 
 					const timer = setInterval(() => {
 						duration++;
-						recordStatus.textContent = `Recording: ${duration}s`;
+						recordStatus.textContent = `Recording: ${duration}s — keep sustaining the vowel…`;
 					}, 1000);
 
 					// Stop tracks on completion
 					mediaRecorder.onstop = () => {
 						clearInterval(timer);
+						stopVowelWatch();
 						isRecording = false;
 						recordBtn.classList.remove('recording');
+
+						if (speechViolation) {
+							// Non-English or non-vowel speech was detected — discard
+							recordBtnText.textContent = 'Record Again';
+							recordStatus.innerHTML = '<span style="color:#dc2626;"><i class="fas fa-times-circle"></i> Non-vowel speech detected. Please record only a sustained vowel sound (Ahhh / Eee / Ohh).</span>';
+							document.getElementById('audioBase64').value = '';
+							document.getElementById('audioInput').value = '';
+							audioChunks = [];
+							return;
+						}
+
 						recordBtnText.textContent = 'Record Again';
 						recordStatus.textContent = `Processing recording... (${duration}s)`;
 
@@ -745,6 +766,58 @@
 		});
 	}
 
+	// ── Vowel-only validation via Web Speech API ──────────────────────────────
+	// Valid inputs: sustained vowel sounds only (English: a e i o u)
+	const VOWEL_WORDS = new Set([
+		'a','ah','aah','ahh','ay','ei',
+		'e','ee','eh','eeh',
+		'i','ii','iii','eye',
+		'o','oh','oo','ooh','ohh',
+		'u','uu','uuu','uh','uhh'
+	]);
+
+	let speechViolation = false;  // set true if non-vowel detected during recording
+	let recognition = null;
+
+	function startVowelWatch() {
+		speechViolation = false;
+		const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+		if (!SpeechRecognition) return; // older browsers: skip silently
+		try {
+			recognition = new SpeechRecognition();
+			recognition.lang = 'en-US';
+			recognition.interimResults = true;
+			recognition.continuous = true;
+			recognition.maxAlternatives = 3;
+			recognition.onresult = function(event) {
+				for (let i = event.resultIndex; i < event.results.length; i++) {
+					const transcript = event.results[i][0].transcript.trim().toLowerCase();
+					const words = transcript.split(/\s+/);
+					for (const word of words) {
+						const clean = word.replace(/[^a-z]/g, '');
+						if (clean && !VOWEL_WORDS.has(clean)) {
+							speechViolation = true;
+							console.warn('Non-vowel detected:', clean);
+						}
+					}
+				}
+			};
+			recognition.onerror = function(e) {
+				console.log('SpeechRecognition error (ignored):', e.error);
+			};
+			recognition.start();
+		} catch(e) {
+			console.log('SpeechRecognition start failed:', e);
+		}
+	}
+
+	function stopVowelWatch() {
+		if (recognition) {
+			try { recognition.stop(); } catch(e) {}
+			recognition = null;
+		}
+	}
+
 	// Prevent submitting while recording or if no file
 	const voiceForm = document.getElementById('voiceUploadForm');
 	if (voiceForm) {
@@ -758,10 +831,16 @@
 			const hasFile = document.getElementById('audioInput').files.length > 0;
 			const serverFileExists = "{% if mgs and 'uploaded' in mgs.lower() %}true{% else %}false{% endif %}" === "true";
 
-			// Accept if we have b64 data, a file input, OR a previously uploaded file on server
 			if (!hasFile && !b64 && !serverFileExists) {
 				e.preventDefault();
 				alert("Please upload or record an audio file first.");
+				return;
+			}
+
+			// Block if the last recording was rejected for non-vowel speech
+			if (speechViolation && !hasFile) {
+				e.preventDefault();
+				alert("Your recording contained non-vowel speech and was discarded.\nPlease record only a sustained English vowel (Ahhh / Eee / Ohh).");
 				return;
 			}
 
