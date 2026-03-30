@@ -719,10 +719,9 @@
 					isRecording = true;
 					recordBtn.classList.add('recording');
 					recordBtnText.textContent = 'Stop Recording';
-					startVowelWatch(); // begin listening for non-vowel speech
 
 					let duration = 0;
-					recordStatus.textContent = `Recording: ${duration}s — say "Ahhh" or a vowel sound`;
+					recordStatus.textContent = `Recording: ${duration}s — say "Ahhh" and sustain it`;
 
 					const timer = setInterval(() => {
 						duration++;
@@ -732,14 +731,13 @@
 					// Stop tracks on completion
 					mediaRecorder.onstop = () => {
 						clearInterval(timer);
-						stopVowelWatch();
 						isRecording = false;
 						recordBtn.classList.remove('recording');
 
-						if (speechViolation) {
-							// Non-English or non-vowel speech was detected — discard
+						// Require at least 2 seconds for reliable acoustic analysis
+						if (duration < 2) {
 							recordBtnText.textContent = 'Record Again';
-							recordStatus.innerHTML = '<span style="color:#dc2626;"><i class="fas fa-times-circle"></i> Non-vowel speech detected. Please record only a sustained vowel sound (Ahhh / Eee / Ohh).</span>';
+							recordStatus.innerHTML = '<span style="color:#dc2626;"><i class="fas fa-times-circle"></i> Too short. Please sustain the vowel sound for at least 3 seconds.</span>';
 							document.getElementById('audioBase64').value = '';
 							document.getElementById('audioInput').value = '';
 							audioChunks = [];
@@ -766,76 +764,8 @@
 		});
 	}
 
-	// ── Vowel-only validation via Web Speech API ──────────────────────────────
-	// Valid inputs: ONLY sustained English vowel sounds (A / E / I / O / U).
-	// Filler sounds like "uh", "aah", "eh" are intentionally excluded.
-	const VOWEL_WORDS = new Set([
-		'a', 'ah', 'ahh',          // A — "Ahhh"
-		'e', 'ee',                  // E — "Eee"
-		'i', 'ii', 'iii',          // I — "Iii"
-		'o', 'oh', 'oo', 'ooh', 'ohh',  // O — "Ohh"
-		'u', 'uu', 'uuu'            // U — "Uuu"
-	]);
-
-	// Vowel characters — a word containing NONE of these is definitely not a vowel sound
-	const VOWEL_CHARS = new Set(['a','e','i','o','u']);
-
-	function hasVowelChar(word) {
-		for (const ch of word) {
-			if (VOWEL_CHARS.has(ch)) return true;
-		}
-		return false;
-	}
-
-	let speechViolation = false;  // set true if non-vowel detected during recording
-	let recognition = null;
-
-	function startVowelWatch() {
-		speechViolation = false;
-		const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-		if (!SpeechRecognition) return; // older browsers: skip silently
-		try {
-			recognition = new SpeechRecognition();
-			recognition.lang = 'en-US';
-			recognition.interimResults = true;
-			recognition.continuous = true;
-			recognition.maxAlternatives = 3;
-			recognition.onresult = function(event) {
-				for (let i = event.resultIndex; i < event.results.length; i++) {
-					const transcript = event.results[i][0].transcript.trim().toLowerCase();
-					const words = transcript.split(/\s+/);
-					for (const word of words) {
-						const clean = word.replace(/[^a-z]/g, '');
-						if (!clean) continue; // skip empty tokens
-						// Reject immediately if the word has no vowel letters at all
-						if (!hasVowelChar(clean)) {
-							speechViolation = true;
-							console.warn('Non-vowel (no vowel chars) detected:', clean);
-							continue;
-						}
-						// Reject if word is not in the approved vowel-sound list
-						if (!VOWEL_WORDS.has(clean)) {
-							speechViolation = true;
-							console.warn('Non-vowel word detected:', clean);
-						}
-					}
-				}
-			};
-			recognition.onerror = function(e) {
-				console.log('SpeechRecognition error (ignored):', e.error);
-			};
-			recognition.start();
-		} catch(e) {
-			console.log('SpeechRecognition start failed:', e);
-		}
-	}
-
-	function stopVowelWatch() {
-		if (recognition) {
-			try { recognition.stop(); } catch(e) {}
-			recognition = null;
-		}
-	}
+	// Duration tracking for minimum-length guard
+	let lastRecordedDuration = 0;
 
 	// Prevent submitting while recording or if no file
 	const voiceForm = document.getElementById('voiceUploadForm');
@@ -856,12 +786,6 @@
 				return;
 			}
 
-			// Block if the last recording was rejected for non-vowel speech
-			if (speechViolation && !hasFile) {
-				e.preventDefault();
-				alert("Your recording contained non-vowel speech and was discarded.\nPlease record only a sustained English vowel (Ahhh / Eee / Ohh).");
-				return;
-			}
 
 			// Show loading state
 			if (e.submitter && e.submitter.value === 'Detect PD') {

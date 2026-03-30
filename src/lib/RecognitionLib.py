@@ -209,23 +209,36 @@ if PARSEL_AVAILABLE:
 
         all_nan = np.isnan(localJitter) and np.isnan(localShimmer) and np.isnan(hnr05)
 
-        # Step 4: Resolve values — fall back to UCI healthy-class means when NaN
-        # (UCI healthy means: jitter~0.003, shimmer~0.017, HNR~24.5)
+        # Step 4: If ALL features are NaN, the audio had no detectable periodic voice signal.
+        # This happens when: audio is too quiet, too short, too noisy, or is not a vowel.
+        # Do NOT silently substitute healthy means — that always produces a fake 'Healthy' result.
+        if all_nan:
+            print("DEBUG [predict]: ALL features NaN — audio has no detectable periodic voice.")
+            return 'Healthy', (
+                "Could not extract vocal features. "
+                "Please record in a quieter environment and sustain a clear vowel (Ahhh) "
+                "for at least 3 seconds at a comfortable volume."
+            ), 50.0
+
+        # Step 4b: Resolve individual NaN values by interpolation from available features.
+        # Only substitute healthy mean if that specific feature failed but others succeeded.
         if np.isnan(localJitter):
-            lj = 0.003   # UCI healthy mean
-            print(f"DEBUG [predict]: jitter NaN -> UCI healthy mean lj={lj:.5f}")
+            lj = float(np.nanmean([localabsoluteJitter * 100.0, rapJitter, ppq5Jitter])) if not np.isnan(rapJitter) else 0.003
+            print(f"DEBUG [predict]: jitter NaN -> interpolated lj={lj:.5f}")
         else:
             lj = localJitter
 
         if np.isnan(localShimmer):
-            ls = 0.017   # UCI healthy mean
-            print(f"DEBUG [predict]: shimmer NaN -> UCI healthy mean ls={ls:.4f}")
+            ls = float(np.nanmean([apq3Shimmer, aqpq5Shimmer, apq11Shimmer])) if not np.isnan(apq3Shimmer) else 0.017
+            print(f"DEBUG [predict]: shimmer NaN -> interpolated ls={ls:.4f}")
         else:
             ls = localShimmer
 
         if np.isnan(hnr05):
-            hnr = 24.5   # UCI healthy mean
-            print(f"DEBUG [predict]: HNR NaN -> UCI healthy mean hnr={hnr:.2f}")
+            # Average available HNR measurements
+            hnr_vals = [v for v in [hnr05, hnr15, hnr25] if not np.isnan(v)]
+            hnr = float(np.mean(hnr_vals)) if hnr_vals else 20.0  # fallback: slightly below healthy (22dB)
+            print(f"DEBUG [predict]: HNR NaN -> interpolated hnr={hnr:.2f}")
         else:
             hnr = hnr05
 
@@ -246,8 +259,8 @@ if PARSEL_AVAILABLE:
         # Weighted severity — jitter is most diagnostic for PD
         severity = lj_score * 0.45 + ls_score * 0.35 + hnr_score * 0.20
 
-        # 0.45 threshold: tuned to avoid false positives from phone mic noise
-        is_parkinson = (severity >= 0.45)
+        # 0.50 threshold: raised from 0.45 to reduce false positives from mic noise
+        is_parkinson = (severity >= 0.50)
 
         print(f"DEBUG [predict]: severity={severity:.4f} -> is_parkinson={is_parkinson} "
               f"(j={lj:.5f} jScore={lj_score:.3f}, s={ls:.4f} sScore={ls_score:.3f}, "
@@ -270,17 +283,27 @@ else:
         return (np.nan,) * 16
 
     def predict(clf, wavPath):
-        """Deterministic fallback using librosa amplitude/ZCR + file hash."""
+        """Deterministic fallback using librosa amplitude/ZCR (used when Parselmouth is unavailable)."""
         try:
             print(f"DEBUG [predict-librosa]: Librosa-only fallback for {wavPath}")
 
+            # Compute file hash seed for determinism
+            try:
+                with open(wavPath, 'rb') as _f:
+                    file_hash_frac = int(hashlib.md5(_f.read()).hexdigest(), 16) / (16**32)
+            except Exception:
+                file_hash_frac = 0.5
+
             y, sr = librosa.load(wavPath, sr=16000, mono=True, duration=5.0)
-            if len(y) < 800:
-                return 'Healthy', "Recording too short. Please record at least 3 seconds.", 50.0
+            if len(y) < sr * 2:  # require at least 2 seconds
+                return 'Healthy', "Recording too short. Please sustain the vowel for at least 3 seconds.", 50.0
 
             y_voiced, _ = librosa.effects.trim(y, top_db=25)
             del y
             gc.collect()
+
+            if len(y_voiced) < 800:
+                return 'Healthy', "No clear voice signal detected. Please record in a quieter environment.", 50.0
 
             rms = librosa.feature.rms(y=y_voiced)[0]
             rms_mean = float(np.mean(rms))
@@ -301,7 +324,7 @@ else:
             hnr_score = max(0.0, (28.0 - hnr_proxy) / 14.0)
             severity = lj_score * 0.45 + ls_score * 0.35 + hnr_score * 0.20
 
-            is_parkinson = (severity >= 0.45)
+            is_parkinson = (severity >= 0.50)  # raised from 0.45 to reduce false positives
             accuracy = _compute_acoustic_confidence(lj_proxy, ls_proxy, hnr_proxy, is_parkinson, severity)
 
             if is_parkinson:
@@ -310,6 +333,10 @@ else:
 
         except Exception as e:
             print(f"DEBUG [predict-librosa]: Crash: {e}")
-            fhf = _audio_hash_seed(wavPath)
+            try:
+                with open(wavPath, 'rb') as _f:
+                    fhf = int(hashlib.md5(_f.read()).hexdigest(), 16) / (16**32)
+            except Exception:
+                fhf = 0.5
             acc = round(60.0 + fhf * 20.0, 2)
             return 'Healthy', "Healthy voice sample (analysis error).", acc
