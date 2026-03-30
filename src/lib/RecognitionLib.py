@@ -47,24 +47,15 @@ _UCI_HEALTHY_MEANS = {
 
 
 def _compute_acoustic_confidence(lj, ls, hnr, is_parkinson, severity):
-    """Compute confidence purely from acoustic deviation from UCI reference ranges.
-
-    UCI reference ranges:
-      Jitter:  Healthy 0.002-0.004, PD 0.008-0.033; threshold ~0.008
-      Shimmer: Healthy 0.010-0.021, PD 0.040-0.072; threshold ~0.030
-      HNR:     Healthy 22-28 dB,    PD 16-21 dB;    threshold ~22.0
-
-    Confidence = how clearly the features sit in the predicted class territory.
-    Returns a float in [55.0, 97.0].
-    """
+    """Compute confidence purely from acoustic deviation from UCI reference ranges."""
     if is_parkinson:
-        # How far into PD territory: severity 0.52 -> 0%, severity 1.0 -> 100%
-        penetration = min((severity - 0.52) / 0.48, 1.0)
+        # How far into PD territory: severity 0.60 -> 0%, severity 1.0 -> 100%
+        penetration = min((severity - 0.60) / 0.40, 1.0)
         raw = 60.0 + penetration * 35.0
         return round(min(95.0, max(60.0, raw)), 2)
     else:
-        # How clearly healthy: severity 0.0 -> 97%, severity 0.52 -> 55%
-        clarity = max(0.0, (0.52 - severity) / 0.52)
+        # How clearly healthy: severity 0.0 -> 97%, severity 0.60 -> 55%
+        clarity = max(0.0, (0.60 - severity) / 0.60)
         raw = 55.0 + clarity * 42.0
         return round(min(97.0, max(55.0, raw)), 2)
 
@@ -261,22 +252,32 @@ if PARSEL_AVAILABLE:
         # Weighted severity — jitter is most diagnostic for PD
         severity = lj_score * 0.45 + ls_score * 0.35 + hnr_score * 0.20
 
-        # 0.50 threshold: raised from 0.45 to reduce false positives from mic noise
-        is_parkinson = (severity >= 0.50)
+        # 0.60 threshold: raised significantly to account for laptop microphone noise
+        is_parkinson = (severity >= 0.60)
 
         print(f"DEBUG [predict]: severity={severity:.4f} -> is_parkinson={is_parkinson} "
               f"(j={lj:.5f} jScore={lj_score:.3f}, s={ls:.4f} sScore={ls_score:.3f}, "
               f"h={hnr:.2f} hScore={hnr_score:.3f})")
 
-        # Step 6: Compute confidence purely from acoustics (no random nudge)
+        # Step 6: Compute confidence purely from acoustics
         accuracy = _compute_acoustic_confidence(lj, ls, hnr, is_parkinson, severity)
 
         print(f"DEBUG [predict]: is_parkinson={is_parkinson}, accuracy={accuracy}%")
 
         if is_parkinson:
-            return 'Parkinson', "Parkinson's vocal markers detected in the sustained vowel.", accuracy
+            if severity > 0.85:
+                disp = "Strong Parkinson's Indicators Detected"
+            elif severity > 0.70:
+                disp = "Parkinson's Pattern Observed"
+            else:
+                disp = "Weak Parkinson's Indicators Detected"
+            return 'Parkinson', disp, accuracy
         else:
-            return 'Healthy', "Healthy voice profile observed in the sustained vowel.", accuracy
+            if accuracy > 88:
+                disp = "Healthy Control Sample"
+            else:
+                disp = "Likely Healthy Sample"
+            return 'Healthy', disp, accuracy
 
 
 else:
@@ -326,12 +327,18 @@ else:
             hnr_score = min(max(0.0, (28.0 - hnr_proxy) / 14.0), 1.0)
             severity = lj_score * 0.45 + ls_score * 0.35 + hnr_score * 0.20
 
-            is_parkinson = (severity >= 0.50)  # raised from 0.45 to reduce false positives
+            is_parkinson = (severity >= 0.60)  # raised to 0.60 for consumer microphones
             accuracy = _compute_acoustic_confidence(lj_proxy, ls_proxy, hnr_proxy, is_parkinson, severity)
 
             if is_parkinson:
-                return 'Parkinson', "Parkinson's vocal markers detected in the sustained vowel.", accuracy
-            return 'Healthy', "Healthy voice profile observed in the sustained vowel.", accuracy
+                if severity > 0.85: disp = "Strong Parkinson's Indicators Detected"
+                elif severity > 0.70: disp = "Parkinson's Pattern Observed"
+                else: disp = "Weak Parkinson's Indicators Detected"
+                return 'Parkinson', disp, accuracy
+            else:
+                if accuracy > 88: disp = "Healthy Control Sample"
+                else: disp = "Likely Healthy Sample"
+                return 'Healthy', disp, accuracy
 
         except Exception as e:
             print(f"DEBUG [predict-librosa]: Crash: {e}")
