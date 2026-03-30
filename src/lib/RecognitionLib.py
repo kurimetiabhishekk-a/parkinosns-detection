@@ -207,13 +207,15 @@ if PARSEL_AVAILABLE:
          apq11Shimmer, hnr05, hnr15, hnr25,
          mean_f0, stdev_f0, max_f0, min_f0) = metrics
 
-        all_nan = np.isnan(localJitter) and np.isnan(localShimmer) and np.isnan(hnr05)
+        # If we couldn't detect a mean fundamental frequency (F0), or if both
+        # jitter and shimmer failed, the audio lacks a coherent periodic signal.
+        # This occurs with silence, breath noise, or very poor microphone quality.
+        signal_failed = np.isnan(mean_f0) or (np.isnan(localJitter) and np.isnan(localShimmer))
 
-        # Step 4: If ALL features are NaN, the audio had no detectable periodic voice signal.
-        # This happens when: audio is too quiet, too short, too noisy, or is not a vowel.
-        # Do NOT silently substitute healthy means — that always produces a fake 'Healthy' result.
-        if all_nan:
-            print("DEBUG [predict]: ALL features NaN — audio has no detectable periodic voice.")
+        # Do NOT silently substitute healthy means — that falsely clears bad recordings,
+        # and letting it proceed with negative HNR mathematically forces a Parkinson's result.
+        if signal_failed:
+            print("DEBUG [predict]: Periodic signal detection failed (F0 or Jitter/Shimmer = NaN).")
             return 'Healthy', (
                 "Could not extract vocal features. "
                 "Please record in a quieter environment and sustain a clear vowel (Ahhh) "
@@ -254,7 +256,7 @@ if PARSEL_AVAILABLE:
         # Score each feature on [0,1]: 0 = clearly healthy, 1 = clearly PD
         lj_score  = min(lj_clamped  / 0.020, 1.0)   # threshold at 0.020 (UCI: PD ~0.012)
         ls_score  = min(ls_clamped  / 0.060, 1.0)   # threshold at 0.060 (UCI: PD ~0.050)
-        hnr_score = max(0.0, (28.0 - hnr_clamped) / 14.0)  # healthy > 22 dB
+        hnr_score = min(max(0.0, (28.0 - hnr_clamped) / 14.0), 1.0)  # max 1.0 to prevent out-of-bounds weight
 
         # Weighted severity — jitter is most diagnostic for PD
         severity = lj_score * 0.45 + ls_score * 0.35 + hnr_score * 0.20
@@ -321,7 +323,7 @@ else:
 
             lj_score = min(lj_proxy / 0.020, 1.0)
             ls_score = min(ls_proxy / 0.060, 1.0)
-            hnr_score = max(0.0, (28.0 - hnr_proxy) / 14.0)
+            hnr_score = min(max(0.0, (28.0 - hnr_proxy) / 14.0), 1.0)
             severity = lj_score * 0.45 + ls_score * 0.35 + hnr_score * 0.20
 
             is_parkinson = (severity >= 0.50)  # raised from 0.45 to reduce false positives
