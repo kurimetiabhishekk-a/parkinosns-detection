@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import time
 
 def cleanup_database():
-    # Load the updated .env (make sure you updated this first!)
+
     load_dotenv()
     
     uri = os.environ.get('MONGODB_URI')
@@ -19,8 +19,7 @@ def cleanup_database():
         print("\n🔄 Connecting to your secure MongoDB...")
         client = MongoClient(uri, serverSelectionTimeoutMS=5000)
         db = client['parkisense']
-        
-        # Check if users collection exists
+
         if 'users' in db.list_collection_names():
             print("🕒 Wiping old insecure data in 3 seconds...")
             time.sleep(3)

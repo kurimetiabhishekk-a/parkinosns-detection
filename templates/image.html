@@ -631,7 +631,6 @@
 
 <div class="drawing-page">
 
-	<!-- Hero Header -->
 	<div class="drawing-hero">
 		<div class="drawing-hero-badge">
 			<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
@@ -643,7 +642,6 @@
 		<p>Draw a spiral below or upload an existing image to screen for motor pattern irregularities</p>
 	</div>
 
-	<!-- Tabs -->
 	<div class="mode-tabs">
 		<button class="mode-tab active" data-tab="draw">
 			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
@@ -664,11 +662,9 @@
 		</button>
 	</div>
 
-	<!-- ─── Draw Tab ─────────────────────────────────────── -->
 	<div class="tab-content active" id="draw-tab">
 		<div class="canvas-section">
 
-			<!-- Top toolbar -->
 			<div class="canvas-topbar">
 				<div class="canvas-topbar-title">
 					<div class="dot"></div>
@@ -689,12 +685,11 @@
 				</div>
 			</div>
 
-			<!-- Canvas Body -->
 			<div class="canvas-body">
-				<!-- Spiral guide overlay -->
+				
 				<svg class="spiral-guide-svg" id="spiralGuide" width="340" height="340" viewBox="0 0 340 340"
 					style="opacity:0.18;" xmlns="http://www.w3.org/2000/svg">
-					<!-- Archimedean spiral approximated with concentric circles -->
+					
 					<circle cx="170" cy="170" r="12" fill="none" stroke="#6366f1" stroke-width="1.5"
 						stroke-dasharray="8 5" />
 					<circle cx="170" cy="170" r="28" fill="none" stroke="#6366f1" stroke-width="1.5"
@@ -710,7 +705,7 @@
 					<circle cx="170" cy="170" r="148" fill="none" stroke="#6366f1" stroke-width="1.2"
 						stroke-dasharray="8 5" />
 					<circle cx="170" cy="170" r="4" fill="#6366f1" opacity="0.6" />
-					<!-- Arrow hinting direction -->
+					
 					<text x="170" y="316" text-anchor="middle" font-size="11" fill="#6366f1"
 						font-family="Inter,sans-serif" font-weight="600" opacity="0.7">draw spiral from centre
 						outward</text>
@@ -723,7 +718,6 @@
 				</div>
 			</div>
 
-			<!-- Action bar -->
 			<form action="{{ url_for('image') }}" method="post" id="drawingForm">
 				<input type="hidden" name="drawing_data" id="drawingData">
 				<div class="canvas-actions">
@@ -744,15 +738,13 @@
 		</div>
 	</div>
 
-	<!-- ─── Upload Tab ───────────────────────────────────── -->
 	<div class="tab-content" id="upload-tab">
 		<div class="upload-shell">
 
-			<!-- Icon + Title -->
 			<div class="upload-hero-icon">
 				<div class="uhi-ring">
 					<div class="uhi-center">
-						<!-- Spiral upload icon -->
+						
 						<svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
 							<circle cx="18" cy="18" r="4" stroke="white" stroke-width="2" fill="none" />
 							<circle cx="18" cy="18" r="9" stroke="white" stroke-width="1.8" fill="none"
@@ -768,7 +760,6 @@
 				<p>JPG, PNG or GIF — max 10 MB</p>
 			</div>
 
-			<!-- Drop zone -->
 			<form action="{{ url_for('image') }}" method="post" enctype="multipart/form-data" id="uploadForm">
 				<div class="dropzone-area" id="uploadZone">
 					<input type="file" id="upload_file" name="doc" accept="image/*">
@@ -820,7 +811,7 @@
 		</div>
 	</div>
 
-</div><!-- /.drawing-page -->
+</div>
 
 <script>
 	/* ─── Tabs ───────────────────────────────────────────── */

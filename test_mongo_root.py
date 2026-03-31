@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 uri = os.environ.get('MONGODB_URI')
-# Remove /parkisense if present to see if we can at least authenticate to the cluster
+
 if '?' in uri:
     parts = uri.split('?')
     base = parts[0]

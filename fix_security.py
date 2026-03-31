@@ -7,11 +7,10 @@ from werkzeug.security import generate_password_hash
 ENV_PATH = '.env'
 
 def setup_security():
-    # 1. Generate a valid key
+
     new_key = Fernet.generate_key().decode()
     print(f"Generated Key: {new_key} (len={len(new_key)})")
-    
-    # 2. Update .env
+
     load_dotenv(ENV_PATH)
     os.environ['ENCRYPTION_KEY'] = new_key
     with open(ENV_PATH, 'r') as f:
@@ -33,7 +32,6 @@ def setup_security():
     
     print("Updated .env file.")
 
-    # 3. Seed demo user
     uri = os.environ.get('MONGODB_URI')
     if not uri:
         print("Error: MONGODB_URI not found in environment.")

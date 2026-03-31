@@ -11,7 +11,6 @@ fernet = Fernet(enc_key.encode())
 client = MongoClient(uri)
 db = client['parkisense']
 
-# Fix the misspelled user
 old_email = 'abhishekkueimeti97@gmail.com'
 new_email = 'abhishekkurimeti97@gmail.com'
 correct_pet = 'toto'

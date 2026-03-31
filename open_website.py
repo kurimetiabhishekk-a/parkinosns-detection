@@ -4,10 +4,9 @@ import re
 import time
 
 print("Starting public tunnel...")
-# Start localtunnel
+
 process = subprocess.Popen(['npx', '-y', 'localtunnel', '--port', '5000', '--subdomain', 'parkisense-live-app'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
-# Wait for the URL to appear
 url = None
 for i in range(15):  # wait up to 15 seconds
     line = process.stdout.readline()

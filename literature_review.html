@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Literature Review – Parkinson's Disease Detection</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Times+New+Roman&family=Georgia&display=swap');
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #fff;
+      font-family: "Times New Roman", Times, serif;
+      font-size: 13pt;
+      color: #111;
+    }
+
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      padding: 25mm 25mm 20mm 25mm;
+      background: #fff;
+    }
+
+    /* Header bar like image */
+    .header-bar {
+      background: #2e4057;
+      color: #fff;
+      font-size: 10pt;
+      padding: 6px 14px;
+      letter-spacing: 1px;
+      margin-bottom: 30px;
+      font-family: Arial, sans-serif;
+    }
+
+    h1.title {
+      text-align: center;
+      font-size: 20pt;
+      font-weight: bold;
+      letter-spacing: 2px;
+      margin-bottom: 28px;
+      font-family: "Times New Roman", Times, serif;
+      text-decoration: underline;
+    }
+
+    .section-heading {
+      font-size: 13pt;
+      font-weight: bold;
+      margin-top: 22px;
+      margin-bottom: 8px;
+      font-family: "Times New Roman", Times, serif;
+    }
+
+    p {
+      text-align: justify;
+      line-height: 1.75;
+      margin-bottom: 14px;
+      font-size: 13pt;
+    }
+
+    /* Orange highlight for first sentence of opening para and full last para */
+    .orange {
+      color: #c8621a;
+    }
+
+    strong {
+      font-weight: bold;
+    }
+
+    @media print {
+      body { background: #fff; }
+      .page { margin: 0; padding: 20mm; }
+      .header-bar { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <div class="header-bar">ParkiSense – Parkinson's Disease Detection Web Application</div>
+
+    <h1 class="title">LITERATURE REVIEW</h1>
+
+    <p>
+      <span class="orange">The rapid advancement of artificial intelligence and machine learning technologies has opened new frontiers in medical diagnostics, particularly in the early detection of neurodegenerative disorders.</span>
+      Parkinson's Disease (PD), a progressive neurological condition affecting millions worldwide, has become a prominent subject of computational research due to its well-documented impact on motor functions such as speech, handwriting, and limb coordination. Several studies and existing systems have focused on developing non-invasive, data-driven diagnostic support tools that can aid clinicians by providing objective and reproducible assessments of motor symptom indicators.
+    </p>
+
+    <p>
+      Traditional methods of Parkinson's Disease diagnosis rely heavily on clinical examination by neurologists, including observation of motor symptoms such as tremor, bradykinesia, rigidity, and postural instability. While these methods remain the gold standard, they are inherently subjective, require specialist access, and often detect the disease only after significant neurological decline has already occurred. This motivates the research community to explore computational approaches that can identify early-stage biomarkers with high accuracy and clinical relevance.
+    </p>
+
+    <p class="section-heading">Voice-Based Analysis for Parkinson's Detection</p>
+
+    <p>
+      One of the most widely researched biomarkers for Parkinson's Disease is vocal impairment. Studies by <strong>Little et al. (2009)</strong> demonstrated that dysphonia measures — including jitter, shimmer, and Harmonic-to-Noise Ratio (HNR) — extracted from sustained phonation recordings can accurately classify PD patients from healthy controls with over 91% accuracy using Support Vector Machines (SVMs). This foundational work established the viability of voice analysis as a non-invasive PD screening tool.
+    </p>
+
+    <p>
+      <strong>Tsanas et al. (2010)</strong> extended this work by applying a large-scale study of 263 vocal features, identifying that nonlinear measures of signal complexity — particularly Recurrence Period Density Entropy (RPDE) and Detrended Fluctuation Analysis (DFA) — provided the strongest discriminatory power. Their approach used ensemble feature selection and Random Forest classifiers, achieving classification accuracy above 98% on the UCI Parkinson's dataset. This research validated the multi-feature approach to voice analysis and underscored the importance of acoustic feature diversity in robust classification.
+    </p>
+
+    <p>
+      More recently, deep learning approaches have been applied to voice analysis. <strong>Grover et al. (2018)</strong> proposed the use of Convolutional Neural Networks (CNNs) applied directly to Mel-frequency Cepstral Coefficients (MFCCs) extracted from voice recordings, achieving competitive accuracy against traditional ML models without the need for explicit hand-crafted feature engineering. This shift toward learned feature representations informed the architectural choices in the ParkiSense voice pipeline.
+    </p>
+
+    <p class="section-heading">Handwriting and Drawing Analysis</p>
+
+    <p>
+      Motor impairment in Parkinson's Disease also manifests prominently in handwriting — a phenomenon known as <strong>micrographia</strong>, where patients produce smaller, irregular writing due to reduced muscle control. <strong>Impedovo &amp; Pirlo (2012)</strong> conducted a comprehensive survey of handwriting analysis for PD detection, concluding that kinematic features — such as pen velocity, pressure, and stroke duration — carry strong diagnostic information. Their work demonstrated that offline (static image) analysis, while less feature-rich than online analysis, remains practically valuable in low-infrastructure settings.
+    </p>
+
+    <p>
+      <strong>Zham et al. (2017)</strong> specifically examined spiral drawing tests, showing that measures of tremor frequency and drawing regularity extracted from spiral images could differentiate PD patients with an accuracy of 87.9% using SVM classifiers. <strong>Pereira et al. (2016)</strong> proposed a deep learning framework using CNNs pre-trained on ImageNet (transfer learning), reporting classification rates above 93% on spiral and meander drawing tasks. This research directly established CNNs as the preferred architecture for image-based PD classification.
+    </p>
+
+    <p class="section-heading">Machine Learning Techniques in Neurological Disease Detection</p>
+
+    <p>
+      A broad body of literature has explored the application of classical and modern machine learning techniques to the classification of neurological conditions. <strong>Pahuja &amp; Nagabhushan (2021)</strong> found that ensemble methods such as Random Forests and Gradient Boosting consistently outperformed single classifiers on tabular acoustic and kinematic datasets, while also highlighting the importance of cross-validation and hyperparameter tuning to prevent overfitting on small medical datasets. <strong>Nilashi et al. (2016)</strong> demonstrated that combining PCA-based dimensionality reduction with multiple classifiers significantly improved classification stability — motivating the feature scaling and reduction pipelines used in this system.
+    </p>
+
+    <p class="section-heading">Web-Based Biomedical Applications and Telemedicine</p>
+
+    <p>
+      The development of web-accessible diagnostic tools has gained significant traction, driven by the need to extend specialist-level assessments to patients in remote or resource-limited settings. <strong>Bassi et al. (2021)</strong> reviewed digital health platforms for neurological assessment, highlighting that the combination of user-friendly interfaces with strong ML backends significantly improved patient adherence and data collection quality. The use of Python-based web frameworks such as <strong>Flask</strong> for deploying machine learning models in clinical support applications is well-established. Research by <strong>Jiang et al. (2017)</strong> further demonstrated the feasibility of cloud-based machine learning inference for real-time medical image analysis, serving CNN predictions through HTTP endpoints.
+    </p>
+
+    <p class="section-heading">Acoustic Feature Extraction: Praat and Librosa</p>
+
+    <p>
+      The extraction of clinically relevant acoustic features from voice recordings is a critical step in any voice-based PD detection pipeline. <strong>Boersma &amp; Weenink (2001)</strong> developed the Praat software, which has become the de facto standard tool for phonetic and acoustic analysis, providing precise algorithms for computing jitter, shimmer, HNR, and formant frequencies — the primary features used in voice-based PD classification. <strong>McFee et al. (2015)</strong> introduced <strong>Librosa</strong>, a Python library that provides efficient implementations of MFCC extraction, spectral centroid, and zero-crossing rate applicable to pathological speech analysis. The combination of both libraries provides a comprehensive acoustic profile spanning both the clinical biomarker space and the representation space effective for deep learning models.
+    </p>
+
+    <p>
+      <span class="orange">This literature review highlights the critical importance of adopting multi-modal, machine learning–driven approaches for the early and non-invasive detection of Parkinson's Disease. Prior work in voice biomarker analysis, spiral drawing assessment, CNN-based image classification, NoSQL-backed healthcare storage, and web-based telemedicine collectively validate the design and methodology of the ParkiSense system. The system synthesises established biomedical signal processing techniques with modern web engineering to deliver a user-friendly, clinically grounded first-pass screening tool — improving accessibility of early-stage assessment and supporting timely clinical consultation for patients worldwide.</span>
+    </p>
+
+  </div>
+</body>
+</html>

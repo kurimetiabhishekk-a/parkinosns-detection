@@ -545,9 +545,6 @@
 <body>
     <div class="page">
 
-        <!-- ══════════════════════════════════════
-             LEFT PANEL — Animated Brain
-        ═══════════════════════════════════════ -->
         <div class="left-panel">
             <div class="brain-container">
                 <img src="{{ url_for('static', filename='img/login.png') }}" alt="AI Brain Analysis"
@@ -556,7 +553,7 @@
                 <div class="left-text">
                     <h2 class="reveal-text delay-1">Early Detection<br>Saves Lives</h2>
                     <p id="animatedPara" class="reveal-text delay-2">
-                        <!-- Words will be injected by JS for animation -->
+                        
                         Advanced machine learning algorithms analyze voice patterns and handwriting to detect early
                         signs of Parkinson's Disease.
                     </p>
@@ -577,13 +574,10 @@
             });
         </script>
 
-        <!-- ══════════════════════════════════════
-             RIGHT PANEL — Login Form
-        ═══════════════════════════════════════ -->
         <div class="right-panel">
 
             <div class="form-container">
-                <!-- Brand -->
+                
                 <div class="brand-name">ParkiSense</div>
                 <div class="form-eyebrow">Welcome Back</div>
                 <h1 class="form-heading">Sign in to continue</h1>
@@ -608,7 +602,7 @@
                 {% endwith %}
 
                 <form action="/login" method="POST" autocomplete="on">
-                    <!-- Email -->
+                    
                     <div class="input-group">
                         <label class="input-label">Email Address</label>
                         <div class="input-wrap">
@@ -618,7 +612,6 @@
                         </div>
                     </div>
 
-                    <!-- Password -->
                     <div class="input-group">
                         <label class="input-label">Password</label>
                         <div class="input-wrap">
@@ -631,7 +624,6 @@
                         </div>
                     </div>
 
-                    <!-- Remember + Forgot -->
                     <div class="form-row-aux">
                         <div class="remember-wrap">
                             <input type="checkbox" id="rememberMe" name="remember">
@@ -640,7 +632,6 @@
                         <a href="/forgot" class="forgot-link">Forgot password?</a>
                     </div>
 
-                    <!-- Submit -->
                     <button type="submit" class="btn-signin">
                         Sign In <i class="fas fa-arrow-right"></i>
                     </button>
@@ -648,7 +639,6 @@
                     {% if google_client_id and google_client_id != 'PASTE_YOUR_GOOGLE_CLIENT_ID_HERE' %}
                     <div class="or-divider"><span class="or-text">or</span></div>
 
-                    <!-- Google Login Hook - only rendered when a real Client ID is set -->
                     <div id="g_id_onload" data-client_id="{{ google_client_id }}" data-context="signin"
                         data-ux_mode="popup" data-callback="handleCredentialResponse" data-auto_prompt="false"
                         data-itp_support="true">

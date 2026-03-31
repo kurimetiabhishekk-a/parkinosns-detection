@@ -1,16 +1,4 @@
-"""
-ParkiSense – Public URL Tunnel
-================================
-Starts the Flask app and exposes it publicly via ngrok.
-Anyone can access it in their browser via the generated URL.
 
-Usage:
-    python run_public.py
-
-Requirements:
-    pip install pyngrok
-    Sign up at https://ngrok.com → copy your authtoken → paste when prompted
-"""
 
 import os
 import sys
@@ -18,7 +6,6 @@ import sys
 def main():
     from pyngrok import ngrok, conf
 
-    # ── Get or ask for authtoken ──────────────────────────────────────────────
     token = os.environ.get("NGROK_AUTHTOKEN", "")
     if not token:
         print("\n" + "="*55)
@@ -33,12 +20,11 @@ def main():
             print("\n[ERROR] No token provided. Exiting.")
             sys.exit(1)
 
-    # ── Configure and start tunnel ────────────────────────────────────────────
     conf.get_default().auth_token = token
     ngrok.kill()  # kill any existing tunnels
 
     print("\n[1/2] Starting Flask app on port 5000...")
-    # Start the Flask app in a background thread
+
     import threading
     import main as flask_app
 

@@ -4,7 +4,6 @@ import numpy as np
 from PIL import Image
 from utils import predictImg
 
-# Clear terminal mock
 print("--- TESTING DRAWING ANALYSIS ---")
 
 test_files = ['good.jpg', 'bad.jpg', 'test_spiral.jpg']

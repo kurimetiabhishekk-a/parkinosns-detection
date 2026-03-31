@@ -14,13 +14,13 @@ def generate_noisy_sine_wave(frequency=200, duration=1.0, volume=0.5, sample_rat
         wav_file.setframerate(sample_rate)
         
         for i in range(n_samples):
-            # Pure sine wave
+
             sine_val = math.sin(2 * math.pi * frequency * i / sample_rate)
-            # Add random noise
+
             noise = (random.random() * 2 - 1) * noise_level
             
             value = int(max_amplitude * (sine_val + noise))
-            # Clip to 16-bit range
+
             value = max(-32767, min(32767, value))
             
             data = struct.pack('<h', value)
@@ -28,5 +28,5 @@ def generate_noisy_sine_wave(frequency=200, duration=1.0, volume=0.5, sample_rat
     print("Generated noisy_tone.wav with noise level", noise_level)
 
 if __name__ == "__main__":
-    # Noise level 0.05 is significant enough to cause jitter/shimmer but should still be healthy
+
     generate_noisy_sine_wave(noise_level=0.05)

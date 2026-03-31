@@ -1,18 +1,4 @@
-"""Image-based Parkinson's drawing analysis.
 
-Primary  : Geometric tremor-index analysis (deterministic, physics-based).
-           Analyses spiral drawings for Parkinson's motor symptoms.
-
-AUDIT FIXES applied (2026-03-11):
-  1. PD_THRESHOLD lowered from 16.0 → 10.0  (was massively over-calibrated,
-     causing virtually ALL drawings to be marked Healthy).
-  2. DIGITAL_BOOST removed (was hiding tremor for every digital drawing).
-  3. Sensitivity thresholds corrected to match published clinical ranges.
-  4. Added full debug logging at every decision step.
-  5. Fixed "not_spiral" detection to be less aggressive (was rejecting valid spirals).
-  6. Confidence calculation made realistic (was using random noise to pad numbers).
-  7. SVM model label mapping clarified (0=Healthy, 1=Parkinson).
-"""
 
 import numpy as np
 import os
@@ -22,24 +8,8 @@ np.set_printoptions(suppress=True)
 
 _base = os.path.dirname(os.path.abspath(__file__))
 
-# ── CALIBRATED THRESHOLDS ──────────────────────────────────────────────────────
-# Based on clinical Parkinson's spiral literature (Zham et al., 2017; Pereira et al., 2018):
-#   Healthy spirals:           combined_tremor  ~  2 – 7
-#   Mild Parkinson's:          combined_tremor  ~  7 – 13
-#   Moderate-Severe:           combined_tremor  > 13
-#
-# FIX v2: Raised from 8.5 to 12.0.
-# 8.5 was too aggressive: small compact spirals (1-2 turns) naturally produce
-# high reversal counts due to multi-turn angular sorting ambiguity, causing
-# false Parkinson's on smooth drawings. 12.0 correctly separates:
-#   Healthy digital spirals:   combined_tremor ~  4 – 10
-#   Parkinson's digital spirals: combined_tremor ~ 12 – 22
 PD_THRESHOLD = 12.0
 
-# FIX: Removed DIGITAL_BOOST entirely. Digital canvas drawings SHOULD show
-# tremor if the user has tremor. Hiding tremor was causing false Healthy results.
-
-# ── Load Feature-Based SVM / RandomForest model (primary for photo uploads) ──
 _feat_model  = None
 _feat_scaler = None
 try:
@@ -55,7 +25,6 @@ except Exception as e:
     print(f"DEBUG [utils]: Feature model load error: {e}")
     _feat_model = _feat_scaler = None
 
-# ── Load Keras CNN (FALLBACK only) ────────────────────────────────────────────
 model = None
 try:
     import tensorflow.keras as keras
@@ -69,8 +38,6 @@ except Exception as e:
 
 data = np.ndarray(shape=(1, 224, 224, 3), dtype=np.float32)
 
-
-# ── Tip banks ────────────────────────────────────────────────────────────────
 HEALTHY_TIPS = [
     'Your drawing shows smooth, consistent lines. Maintain hand-eye coordination exercises.',
     'Healthy pattern detected. Antioxidant-rich diets (berries, nuts) support neurological health.',
@@ -86,9 +53,8 @@ WEAK_TIPS = [
     'Shaky lines detected. Simple finger-tapping exercises can help monitor motor skills.',
 ]
 
-
 def _select_tip(tips, image_path):
-    """Pick a deterministic tip based on image file hash."""
+    
     import hashlib
     try:
         with open(image_path, 'rb') as f:
@@ -97,26 +63,12 @@ def _select_tip(tips, image_path):
         h = 0
     return tips[h % len(tips)]
 
-
 def _geometric_spiral_analysis(gray_img):
-    """
-    Analyse a spiral drawing geometrically.
-
-    FIX: Angular spread threshold lowered from 3 → 2 sectors so valid but
-    incomplete spirals are not rejected. Aspect ratio threshold raised from
-    8 → 12 to be less aggressive. Minimum canvas coverage lowered from 2% → 1%.
-
-    Returns (status, tremor_index, metrics):
-      status        : True (blank) | 'not_spiral' | False (analysed OK)
-      tremor_index  : float — higher means shakier
-      metrics       : dict of detailed measurements
-    """
+    
     arr = np.asarray(gray_img, dtype=np.float32)
 
-    # Invert so drawing pixels are bright
     inv = 255.0 - arr
 
-    # FIX: Threshold was 30 — this misses light pencil lines. Lowered to 20.
     threshold = 20.0
     drawn_mask = inv > threshold
     n_drawn = int(np.sum(drawn_mask))
@@ -128,17 +80,14 @@ def _geometric_spiral_analysis(gray_img):
 
     ys, xs = np.where(drawn_mask)
 
-    # Centroid
     cx = float(np.mean(xs))
     cy = float(np.mean(ys))
 
-    # Polar coords
     dx = xs - cx
     dy = ys - cy
     r = np.sqrt(dx**2 + dy**2)
     theta = np.arctan2(dy, dx)  # -π to π
 
-    # Remove tiny artefacts
     r_min_cutoff = 3.0
     valid = r > r_min_cutoff
     r = r[valid]
@@ -147,8 +96,6 @@ def _geometric_spiral_analysis(gray_img):
     if len(r) < 50:
         return True, 0.0, {}
 
-    # ── Spiral shape validation ──────────────────────────────────────────────
-    # 1. Angular coverage: need at least 2 of 12 sectors covered (FIX: was 3)
     n_sectors = 12
     sector_size = 2 * np.pi / n_sectors
     theta_pos = theta + np.pi
@@ -157,7 +104,6 @@ def _geometric_spiral_analysis(gray_img):
     if sectors_covered < 2:
         return 'not_spiral', 0.0, {}
 
-    # 2. Aspect ratio: reject only extremely thin lines (FIX: was 8, now 12)
     w = float(xs.max() - xs.min()) + 1.0
     h = float(ys.max() - ys.min()) + 1.0
     aspect = max(w, h) / (min(w, h) + 1e-6)
@@ -165,7 +111,6 @@ def _geometric_spiral_analysis(gray_img):
     if aspect > 12.0:
         return 'not_spiral', 0.0, {}
 
-    # 3. Radial variation: spiral must grow outward (FIX: threshold 0.20 → 0.10)
     r_mean = float(np.mean(r))
     r_range = float(r.max() - r.min())
     r_variation = r_range / (r_mean + 1e-6)
@@ -173,7 +118,6 @@ def _geometric_spiral_analysis(gray_img):
     if r_mean < 1.0 or r_variation < 0.10:
         return 'not_spiral', 0.0, {}
 
-    # 4. Minimum drawing size (FIX: was 2%, now 1%)
     img_w = gray_img.size[0] if hasattr(gray_img, 'size') else gray_img.shape[1]
     img_h = gray_img.size[1] if hasattr(gray_img, 'size') else gray_img.shape[0]
     bbox_area = w * h
@@ -183,12 +127,10 @@ def _geometric_spiral_analysis(gray_img):
     if coverage < 0.01:
         return 'not_spiral', 0.0, {}
 
-    # ── Sort by angle and compute radial profile ─────────────────────────────
     order = np.argsort(theta)
     r_sorted = r[order]
     theta_sorted = theta[order]
 
-    # Moving average = expected smooth radius
     window = max(10, len(r_sorted) // 30)
     def moving_avg(x, w):
         return np.convolve(x, np.ones(w) / w, mode='same')
@@ -196,7 +138,6 @@ def _geometric_spiral_analysis(gray_img):
     r_expected = moving_avg(r_sorted, window)
     residuals = r_sorted - r_expected
 
-    # ── Tremor index: local RMS of residuals ─────────────────────────────────
     local_window = max(8, len(residuals) // 40)
     rms_list = []
     step = max(1, local_window // 2)
@@ -209,41 +150,22 @@ def _geometric_spiral_analysis(gray_img):
 
     tremor_rms = float(np.mean(rms_list))
 
-    # ── Reversal rate ────────────────────────────────────────────────────────
     dr = np.diff(r_sorted)
     sign_changes = int(np.sum(np.diff(np.sign(dr)) != 0))
     reversal_rate = sign_changes / max(len(dr), 1)
 
-    # ── Gap ratio ────────────────────────────────────────────────────────────
     angle_gaps = np.diff(theta_sorted)
     large_gaps = np.sum(np.abs(angle_gaps) > 0.5)
     gap_ratio = large_gaps / max(len(angle_gaps), 1)
 
-    # ── Combined tremor index (hybrid scale) ───────────────────────────
-    # FIX v3: Hybrid approach based on spiral physical size:
-    #
-    #  Small spirals  (r_mean <= 70px) = digital canvas drawings.
-    #    These have naturally low absolute pixel tremor even when shaky;
-    #    normalize by r_mean so a 3px deviation on a 40px spiral
-    #    scores the same as a 9px deviation on a 120px spiral.
-    #
-    #  Large spirals  (r_mean >  70px) = scanned paper / photo uploads.
-    #    Real hand tremor produces 15-40px absolute deviations on paper.
-    #    Do NOT normalize by r_mean or those get collapsed to near-zero.
-    #    Use absolute tremor_rms * fixed scale factor instead.
-    #
     SMALL_SPIRAL_CUTOFF = 70.0  # pixels
 
     if r_mean <= SMALL_SPIRAL_CUTOFF:
-        # Digital canvas: normalize so size doesn\'t matter
-        # Healthy: normalized ~0.06-0.18 -> scaled ~2.4-7.2
-        # Parkinson: normalized ~0.25-0.55 -> scaled ~10-22
+
         scaled_tremor = (tremor_rms / (r_mean + 1e-6)) * 40.0
         print(f"DEBUG [geom]: small-spiral path, scaled_tremor={scaled_tremor:.3f}")
     else:
-        # Scanned paper: use absolute tremor, scaled so ~15px=9 (mild PD), ~30px=18 (severe)
-        # Healthy paper spiral: tremor_rms ~3-7px -> scaled ~1.8-4.2
-        # Parkinson paper spiral: tremor_rms ~15-40px -> scaled ~9-24
+
         scaled_tremor = tremor_rms * 0.6
         print(f"DEBUG [geom]: large-spiral path, scaled_tremor={scaled_tremor:.3f}")
 
@@ -265,19 +187,12 @@ def _geometric_spiral_analysis(gray_img):
 
     return False, combined_tremor, metrics
 
-
 def _geometric_classify(tremor_index, metrics):
-    """
-    Make geometric classification decision.
-
-    FIX: Removed random noise from confidence (was adding random.uniform(-1,1)
-    which could flip borderline results across calls).
-    Confidence is now deterministic and proportional to distance from threshold.
-    """
+    
     if tremor_index > PD_THRESHOLD:
-        # Distance above threshold → confidence
+
         excess = tremor_index - PD_THRESHOLD
-        # 70% base + up to 25% based on severity
+
         conf = round(min(70.0 + min(25.0, excess * 3.5), 97.0), 2)
 
         if tremor_index > 16.0:
@@ -291,7 +206,7 @@ def _geometric_classify(tremor_index, metrics):
         return 'Parkinson', display_label, conf
 
     else:
-        # Distance below threshold → confidence
+
         stability = PD_THRESHOLD - tremor_index
         conf = round(min(68.0 + min(28.0, stability * 4.0), 96.0), 2)
 
@@ -303,20 +218,8 @@ def _geometric_classify(tremor_index, metrics):
         print(f"DEBUG [classify]: -> Healthy (tremor={tremor_index:.3f} < threshold={PD_THRESHOLD}), conf={conf}%")
         return 'Healthy', display_label, conf
 
-
 def predictImg(image_path='static/img/test.jpg'):
-    """
-    Predict Parkinson's from a spiral drawing image.
-
-    Returns (label, display_result, suggestion, confidence_str)
-      label = 'Healthy' | 'Parkinson' | None (error)
-
-    Pipeline:
-      1. Load and validate image.
-      2. Geometric spiral analysis (PRIMARY — works for ALL inputs).
-      3. SVM refinement for photo uploads only (to adjust confidence, not label).
-      4. Keras CNN fallback (only if SVM unavailable and it's a photo).
-    """
+    
     from PIL import Image, ImageOps
 
     print(f"\n{'='*60}")
@@ -345,7 +248,6 @@ def predictImg(image_path='static/img/test.jpg'):
     healthy_tip = _select_tip(HEALTHY_TIPS, image_path)
     weak_tip    = _select_tip(WEAK_TIPS, image_path)
 
-    # ── Step 1: Geometric analysis ────────────────────────────────────────────
     status, tremor_index, metrics = _geometric_spiral_analysis(gray)
 
     if status is True:
@@ -357,7 +259,6 @@ def predictImg(image_path='static/img/test.jpg'):
                 'Please draw a spiral pattern (a coil starting from the centre outward). '
                 'Random shapes or straight lines cannot be analysed for Parkinson\'s indicators.', '0')
 
-    # ── Detect digital canvas vs photo ────────────────────────────────────────
     gray_arr = np.asarray(gray, dtype=np.float32)
     inv_arr = 255.0 - gray_arr
     bg_mask = inv_arr < 20.0
@@ -368,14 +269,11 @@ def predictImg(image_path='static/img/test.jpg'):
             is_digital_canvas = True
     print(f"DEBUG [predictImg]: is_digital_canvas={is_digital_canvas}")
 
-    # ── Step 2: Classify with calibrated thresholds ─────────────────────────
-    # FIX: No digital boost — tremor is tremor regardless of input device.
     label, display_label, base_conf = _geometric_classify(tremor_index, metrics)
     suggestion = weak_tip if label == 'Parkinson' else healthy_tip
 
     print(f"DEBUG [predictImg]: Geometric decision: label={label}, conf={base_conf}%")
 
-    # ── Step 3: SVM refinement for photo uploads ─────────────────────────────
     if not is_digital_canvas and _feat_model is not None and _feat_scaler is not None:
         try:
             from skimage.feature import hog, local_binary_pattern
@@ -393,7 +291,7 @@ def predictImg(image_path='static/img/test.jpg'):
             feats_scaled = _feat_scaler.transform(feats)
 
             pred_label_idx = int(_feat_model.predict(feats_scaled)[0])
-            # FIX: label mapping — 0=Healthy, 1=Parkinson (same as training labels.txt)
+
             svm_is_parkinson = (pred_label_idx == 1)
 
             if hasattr(_feat_model, 'predict_proba'):
@@ -404,9 +302,6 @@ def predictImg(image_path='static/img/test.jpg'):
 
             print(f"DEBUG [predictImg]: SVM pred={pred_label_idx} (PD={svm_is_parkinson}), raw_conf={raw_conf:.3f}")
 
-            # FIX v3: For PHOTO UPLOADS, SVM is authoritative.
-            # The SVM was trained on real scanned paper spirals — exactly this input type.
-            # Let it OVERRIDE the geometric label. Geometric is a fallback, not ground truth.
             svm_label = 'Parkinson' if svm_is_parkinson else 'Healthy'
             svm_conf  = round(min(98.0, raw_conf * 100.0), 2)
 
@@ -426,7 +321,6 @@ def predictImg(image_path='static/img/test.jpg'):
         except Exception as e:
             print(f"DEBUG [predictImg]: SVM error: {e} — falling back to geometric")
 
-    # ── Step 4: Keras CNN (fallback for photos when SVM unavailable) ───────────
     if not is_digital_canvas and model is not None:
         try:
             size = (224, 224)
@@ -457,7 +351,6 @@ def predictImg(image_path='static/img/test.jpg'):
         except Exception as e:
             print(f"DEBUG [predictImg]: Keras error: {e}")
 
-    # ── Step 5: Pure geometric fallback (last resort) ────────────────────────
     print(f"DEBUG [predictImg]: Returning pure geometric result: {label}, {base_conf}%")
     print('='*60)
     return label, display_label, suggestion, f'{base_conf:.2f}'

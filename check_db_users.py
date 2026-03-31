@@ -9,7 +9,7 @@ else:
     try:
         con = sqlite3.connect(db_path)
         cursor = con.cursor()
-        # Check if Users table exists
+
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='Users';")
         if not cursor.fetchone():
              print("Users table does not exist.")

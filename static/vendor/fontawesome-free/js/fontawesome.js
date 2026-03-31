@@ -1,7 +1,4 @@
-/*!
- * Font Awesome Free 5.15.3 by @fontawesome - https://fontawesome.com
- * License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License)
- */
+
 (function () {
   'use strict';
 
@@ -233,9 +230,7 @@
   }
 
   function coerce(val) {
-    // Getting an empty string will occur if the attribute is set on the HTML tag but without a value
-    // We'll assume that this is an indication that it should be toggled to true
-    // For example <script data-search-pseudo-elements src="..."></script>
+
     if (val === '') return true;
     if (val === 'false') return false;
     if (val === 'true') return true;
@@ -321,11 +316,10 @@
   var asyncTimer;
 
   function asyncFlush() {
-    // run promise callbacks
+
     for (var i = 0; i < asyncQueue.length; i++) {
       asyncQueue[i][0](asyncQueue[i][1]);
     } // reset async asyncQueue
-
 
     asyncQueue = [];
     asyncTimer = false;
@@ -393,7 +387,7 @@
       }
 
       if (value && (typeof value === 'function' || _typeof(value) === 'object')) {
-        // then should be retrieved only once
+
         var then = value.then;
 
         if (typeof then === 'function') {
@@ -470,10 +464,6 @@
   function notifyRejectionHandled(promise) {
     global.process.emit('rejectionHandled', promise);
   }
-  /**
-   * @class
-   */
-
 
   function P(resolver) {
     if (typeof resolver !== 'function') {
@@ -511,10 +501,10 @@
       }
 
       if (this._state === FULFILLED || this._state === REJECTED) {
-        // already resolved, call callback async
+
         asyncCall(invokeCallback, subscriber);
       } else {
-        // subscribe
+
         this._then.push(subscriber);
       }
 
@@ -1128,29 +1118,11 @@
     end: end
   };
 
-  /**
-   * Internal helper to bind a function known to have 4 arguments
-   * to a given context.
-   */
-
   var bindInternal4 = function bindInternal4(func, thisContext) {
     return function (a, b, c, d) {
       return func.call(thisContext, a, b, c, d);
     };
   };
-
-  /**
-   * # Reduce
-   *
-   * A fast object `.reduce()` implementation.
-   *
-   * @param  {Object}   subject      The object to reduce over.
-   * @param  {Function} fn           The reducer function.
-   * @param  {mixed}    initialValue The initial value for the reducer, defaults to subject[0].
-   * @param  {Object}   thisContext  The context for the reducer.
-   * @return {mixed}                 The final result.
-   */
-
 
   var reduce = function fastReduceObject(subject, fn, initialValue, thisContext) {
     var keys = Object.keys(subject),
@@ -1209,13 +1181,6 @@
     } else {
       namespace.styles[prefix] = _objectSpread({}, namespace.styles[prefix] || {}, normalized);
     }
-    /**
-     * Font Awesome 4 used the prefix of `fa` for all icons. With the introduction
-     * of new styles we needed to differentiate between them. Prefix `fa` is now an alias
-     * for `fas` so we'll easy the upgrade process for our users by automatically defining
-     * this as well.
-     */
-
 
     if (prefix === 'fas') {
       defineIcons('fa', icons);
@@ -1367,7 +1332,6 @@
     nest: function nest(mutation) {
       var node = mutation[0];
       var abstract = mutation[1]; // If we already have a replaced node we do not want to continue nesting within it.
-      // Short-circuit to the standard replacement
 
       if (~classArray(node).indexOf(config.replacementClass)) {
         return mutators.replace(mutation);
@@ -1995,7 +1959,7 @@
     var pendingAttribute = "".concat(DATA_FA_PSEUDO_ELEMENT_PENDING).concat(position.replace(':', '-'));
     return new picked(function (resolve, reject) {
       if (node.getAttribute(pendingAttribute) !== null) {
-        // This node is already being processed
+
         return resolve();
       }
 
@@ -2009,9 +1973,7 @@
       var content = styles.getPropertyValue('content');
 
       if (alreadyProcessedPseudoElement && !fontFamily) {
-        // If we've already processed it but the current computed style does not result in a font-family,
-        // that probably means that a class name that was previously present to make the icon has been
-        // removed. So we now should delete the icon.
+
         node.removeChild(alreadyProcessedPseudoElement);
         return resolve();
       } else if (fontFamily && content !== 'none' && content !== '') {
@@ -2021,13 +1983,12 @@
         var hexValue = toHex(_content.length === 3 ? _content.substr(1, 1) : _content);
         var iconName = byUnicode(prefix, hexValue);
         var iconIdentifier = iconName; // Only convert the pseudo element in this :before/:after position into an icon if we haven't
-        // already done so with the same prefix and iconName
 
         if (iconName && (!alreadyProcessedPseudoElement || alreadyProcessedPseudoElement.getAttribute(DATA_PREFIX) !== prefix || alreadyProcessedPseudoElement.getAttribute(DATA_ICON) !== iconIdentifier)) {
           node.setAttribute(pendingAttribute, iconIdentifier);
 
           if (alreadyProcessedPseudoElement) {
-            // Delete the old one, since we're replacing it with a new one
+
             node.removeChild(alreadyProcessedPseudoElement);
           }
 
@@ -2114,7 +2075,7 @@
   }
 
   var Library =
-  /*#__PURE__*/
+  
   function () {
     function Library() {
       _classCallCheck(this, Library);

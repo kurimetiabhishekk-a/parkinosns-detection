@@ -16,7 +16,7 @@ print(f"Fixing name for {email}...")
 
 user = db.users.find_one({'email': email})
 if user:
-    # Re-encrypt name with the CORRECT current key
+
     new_name = fernet.encrypt("Abhishek".encode()).decode()
     db.users.update_one(
         {'_id': user['_id']},

@@ -12,20 +12,17 @@ from dotenv import load_dotenv
 from utils import *
 from voiceTest import *
 
-# Google Login
 try:
     from google.oauth2 import id_token
     from google.auth.transport import requests as google_requests
 except ImportError:
     pass
 
-# Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = (os.environ.get('SECRET_KEY') or 'parkisense_secure_default_key').strip()
-# ── Encryption Setup ──────────────────────────────────────────────────────────
-# Hardcoded to ensure consistency with existing database records
+
 ENCRYPTION_KEY = 'opVjAjT3z__mi9-j0dWS6idv5GqHFuk7CFQvuwB5Gio='
 fernet = None
 try:
@@ -34,13 +31,13 @@ except Exception as e:
     print(f"ERROR: Invalid ENCRYPTION_KEY format: {e}")
 
 def encrypt_data(data):
-    """Encrypt a string if fernet is available."""
+    
     if not fernet or not data:
         return data
     return fernet.encrypt(data.encode()).decode()
 
 def decrypt_data(data):
-    """Decrypt a string if fernet is available."""
+    
     if not fernet or not data:
         return data
     try:
@@ -54,7 +51,6 @@ app.config['SESSION_COOKIE_SECURE'] = os.environ.get('FLASK_ENV') == 'production
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # Allow up to 50 MB uploads
 
-# ── MongoDB (users only: login / register / forgot-password) ──────────────────
 MONGODB_URI = (os.environ.get('MONGODB_URI') or 'mongodb+srv://abhishekkurimeti97_db_user:ParkiSense_2026_Secure123@cluster0.gege15n.mongodb.net/parkisense?retryWrites=true&w=majority').strip()
 if MONGODB_URI.startswith('"') and MONGODB_URI.endswith('"'):
     MONGODB_URI = MONGODB_URI[1:-1]
@@ -67,15 +63,14 @@ _mongo_client = None   # MongoClient (kept alive for connection pooling)
 _mongo_db     = None   # parkisense database handle
 
 def get_users_collection():
-    """Return MongoDB 'users' collection. Reconnects automatically if needed."""
+    
     global _mongo_client, _mongo_db
 
-    # --- Use existing connection if available ---
     if _mongo_client is not None:
         try:
             return _mongo_db.users
         except Exception:
-            # Handle potential dropped connection handles
+
             _mongo_client = None
             _mongo_db     = None
 
@@ -92,9 +87,9 @@ def get_users_collection():
             socketTimeoutMS=5000,
             retryWrites=True
         )
-        # We'll try to get the database handle. If auth fails later during a query, Flask will catch it.
+
         _mongo_db = _mongo_client['parkisense']
-        # We try to create index but don't strictly crash here
+
         try:
             _mongo_db.users.create_index('email', unique=True)
         except:
@@ -107,7 +102,7 @@ def get_users_collection():
         return None
 
 def init_db():
-    """Seed a demo account on startup."""
+    
     os.makedirs('static/img', exist_ok=True)
     os.makedirs('upload', exist_ok=True)
     try:
@@ -129,11 +124,10 @@ def init_db():
 
 init_db()
 
-
 @app.context_processor
 def inject_now():
     name = session.get('name', '')
-    # Auto-recovery if session name is corrupted/encrypted
+
     if name == "[Encrypted]" and 'user_email' in session:
         try:
             col = get_users_collection()
@@ -150,7 +144,6 @@ def inject_now():
         'name': name
     }
 
-
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -159,13 +152,10 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-
 @app.route('/')
 def landing():
     return redirect(url_for('login'))
 
-
-# ── Login ─────────────────────────────────────────────────────────────────────
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     error = None
@@ -191,7 +181,6 @@ def login():
         return render_template('login.html', error=error, google_client_id=os.environ.get('GOOGLE_CLIENT_ID'))
     return render_template('login.html', google_client_id=os.environ.get('GOOGLE_CLIENT_ID'))
 
-
 @app.route('/login-google', methods=['POST'])
 def login_google():
     token = request.form.get('id_token')
@@ -203,7 +192,7 @@ def login_google():
         return render_template('login.html', error="Google Login is not configured on this server (Missing Client ID).")
         
     try:
-        # Verify the token
+
         idinfo = id_token.verify_oauth2_token(token, google_requests.Request(), client_id)
         
         email = idinfo['email'].lower()
@@ -215,7 +204,7 @@ def login_google():
              
         user = col.find_one({'email': email})
         if not user:
-            # Register them instantly with encrypted name
+
             col.insert_one({
                 'date': datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
                 'name': encrypt_data(name),
@@ -224,7 +213,7 @@ def login_google():
                 'pet': encrypt_data('google-auth-safe')
             })
         else:
-            # Update name if it's not encrypted yet or changed
+
             col.update_one({'email': email}, {'$set': {'name': encrypt_data(name)}})
             
         session['name'] = name
@@ -235,15 +224,11 @@ def login_google():
         print(f"DEBUG: Google Auth Error: {e}")
         return render_template('login.html', error="Google Authentication failed.")
 
-
-# ── Logout ────────────────────────────────────────────────────────────────────
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('login'))
 
-
-# ── Register ──────────────────────────────────────────────────────────────────
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     error = None
@@ -278,15 +263,13 @@ def register():
             error = f"Database Error: {str(e)}"
     return render_template('register.html', error=error)
 
-
-# ── Forgot Password ───────────────────────────────────────────────────────────
 @app.route('/forgot', methods=['GET', 'POST'])
 def forgot():
     error = None
     step = request.form.get('step', '1')
 
     if request.method == 'POST':
-        # ── STEP 1: Verify identity ──────────────────────────────────────────
+
         if step == '1':
             email = (request.form.get('email') or '').strip().lower()
             pet   = (request.form.get('pet')   or '').strip().lower()
@@ -297,7 +280,7 @@ def forgot():
                 else:
                     user = col.find_one({'email': email})
                     if user and decrypt_data(user['pet']) == pet:
-                        # Identity verified — show Step 2 (set new password)
+
                         return render_template('forgot-password.html',
                                                step=2, verified_email=email)
                     else:
@@ -307,7 +290,6 @@ def forgot():
                 error = "Database busy. Please try again."
             return render_template('forgot-password.html', error=error, step=1)
 
-        # ── STEP 2: Set new password ─────────────────────────────────────────
         elif step == '2':
             email     = (request.form.get('email')     or '').strip().lower()
             new_pwd   =  request.form.get('new_password')   or ''
@@ -340,15 +322,11 @@ def forgot():
 
     return render_template('forgot-password.html', step=1)
 
-
-# ── Home ──────────────────────────────────────────────────────────────────────
 @app.route('/home', methods=['GET', 'POST'])
 @login_required
 def home():
     return render_template('home.html')
 
-
-# ── Dashboard ───────────────────────────────────────────────────────────────────
 @app.route('/dashboard', methods=['GET', 'POST'])
 @login_required
 def dashboard():
@@ -366,14 +344,13 @@ def dashboard():
 
     now_date = datetime.now().strftime("%d %B %Y, %H:%M")
 
-    # Load persistent test history from MongoDB for this user
     test_history = []
     try:
         col = get_users_collection()
         if col is not None and 'user_email' in session:
             user_doc = col.find_one({'email': session['user_email']}, {'test_history': 1})
             if user_doc and 'test_history' in user_doc:
-                # Return most-recent first, limit to last 20 entries
+
                 test_history = list(reversed(user_doc['test_history'][-20:]))
     except Exception as e:
         print(f"DEBUG: Failed to load test history: {e}")
@@ -383,8 +360,6 @@ def dashboard():
                            final=final, now_date=now_date,
                            test_history=test_history)
 
-
-# ── Spiral/Image Test ─────────────────────────────────────────────────────────
 @app.route('/image', methods=['GET', 'POST'])
 @login_required
 def image():
@@ -408,14 +383,13 @@ def image():
             return redirect(url_for('image_test'))
     return render_template('image.html')
 
-
 @app.route('/image_test', methods=['GET', 'POST'])
 @login_required
 def image_test():
     label, result, suggestion, accuracy = predictImg(r'static/img/test.jpg')
     if label is not None:
         session['pred'] = label
-        # Persist drawing result to MongoDB per user
+
         try:
             col = get_users_collection()
             if col is not None and 'user_email' in session:
@@ -432,7 +406,6 @@ def image_test():
         except Exception as e:
             print(f"DEBUG: Failed to save drawing result to DB: {e}")
     return render_template('image_test.html', label=label, result=result, suggestion=suggestion, confidence=accuracy)
-
 
 @app.route('/upload', methods=['GET', 'POST'])
 @login_required
@@ -475,11 +448,9 @@ def upload():
                     _, msg = voice_result
                     return render_template('upload.html', mgs=msg, accuracy=None)
 
-                # Default unpack for 3 values
                 label, result, accuracy = voice_result
                 session['voicePred'] = label
 
-                # Persist voice result to MongoDB per user
                 try:
                     col = get_users_collection()
                     if col is not None and 'user_email' in session:
@@ -505,17 +476,14 @@ def upload():
                 return render_template('upload.html', mgs="Analysis failed due to a server error. Please try a shorter recording.", accuracy=None)
     return render_template('upload.html')
 
-
 @app.route('/record', methods=['GET', 'POST'])
 @login_required
 def record():
     return render_template('record.html')
 
-
-# ── Diagnostic Route ──────────────────────────────────────────────────────────
 @app.route('/diagnose')
 def diagnose():
-    """Check system status for troubleshooting."""
+    
     status = {
         "status": "online",
         "mongodb": "unknown",
@@ -526,7 +494,6 @@ def diagnose():
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
 
-    # Test Libraries
     try:
         import parselmouth
         status["libraries"]["parselmouth"] = "AVAILABLE"
@@ -539,17 +506,14 @@ def diagnose():
     except ImportError:
         status["libraries"]["librosa"] = "MISSING"
 
-    # Test Model
     if os.path.exists('src/trainedModel.sav'):
         status["model_file"] = "READY"
 
-    # Test Uploads
     if os.path.exists('upload/test.wav'):
         status["test_wav_size"] = f"{os.path.getsize('upload/test.wav') / 1024:.1f} KB"
     else:
         status["test_wav_size"] = "MISSING"
 
-    # Test MongoDB
     try:
         col = get_users_collection()
         if col is not None:
@@ -561,7 +525,6 @@ def diagnose():
     except Exception as e:
         status["mongodb"] = f"ERROR: {str(e)}"
 
-    # Test Encryption
     if fernet:
         status["encryption"] = "READY"
         if ENCRYPTION_KEY:
@@ -571,7 +534,6 @@ def diagnose():
 
     return status
 
-
 @app.after_request
 def add_header(response):
     response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
@@ -579,14 +541,12 @@ def add_header(response):
     response.headers['Expires'] = '-1'
     return response
 
-
-# ── Admin Panel ───────────────────────────────────────────────────────────────
 ADMIN_EMAIL = (os.environ.get('ADMIN_EMAIL') or 'abhishekkurimeti97@gmail.com').strip().lower()
 
 @app.route('/admin')
 @login_required
 def admin_panel():
-    """Admin-only page: shows all registered users."""
+    
     current_email = session.get('user_email', '').strip().lower()
     if current_email != ADMIN_EMAIL:
         return render_template('login.html',
@@ -610,7 +570,6 @@ def admin_panel():
     except Exception as e:
         print(f"DEBUG: Admin panel error: {e}")
         return render_template('admin.html', users=[], error=str(e))
-
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)

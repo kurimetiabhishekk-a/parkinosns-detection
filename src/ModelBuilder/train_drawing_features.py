@@ -1,16 +1,4 @@
-"""
-ParkiSense – Drawing Model Trainer (Feature-Based)
-====================================================
-Uses HOG + LBP image features + SVM/Random Forest classifier.
-This approach works significantly better than raw CNN on small datasets
-(51-102 images per class) and is the method used in published Parkinson's
-spiral research (Zham et al., 2017; Pereira et al., 2018).
 
-Saves:
-  - drawing_model.pkl   : trained sklearn model
-  - drawing_scaler.pkl  : feature scaler
-  - labels.txt          : class labels
-"""
 
 import os, sys, joblib, warnings
 import numpy as np
@@ -27,16 +15,13 @@ LABELS_OUT = BASE_DIR / ".." / ".." / "labels.txt"
 IMG_SIZE = 128  # resize to 128x128
 SEED     = 42
 
-
 def extract_features(img_gray_arr):
-    """Extract HOG + LBP features from a grayscale image array."""
+    
     from skimage.feature import hog, local_binary_pattern
     from skimage.transform import resize
 
-    # Resize to standard size
     img = resize(img_gray_arr, (IMG_SIZE, IMG_SIZE), anti_aliasing=True)
 
-    # HOG features — captures shape/edge orientation
     hog_feats = hog(
         img,
         orientations=9,
@@ -46,15 +31,13 @@ def extract_features(img_gray_arr):
         feature_vector=True
     )
 
-    # LBP features — captures texture/micro-patterns
     lbp = local_binary_pattern(img, P=24, R=3, method='uniform')
     lbp_hist, _ = np.histogram(lbp.ravel(), bins=26, range=(0, 26), density=True)
 
     return np.concatenate([hog_feats, lbp_hist])
 
-
 def load_dataset():
-    """Load ALL spiral + wave images from both training and testing splits."""
+    
     from PIL import Image
 
     X, y = [], []
@@ -85,7 +68,6 @@ def load_dataset():
     print(f"  Total    : {sum(counts.values())} images")
     return np.array(X), np.array(y)
 
-
 def train():
     from sklearn.preprocessing import StandardScaler
     from sklearn.svm import SVC
@@ -108,7 +90,6 @@ def train():
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
 
-    # ── Try multiple classifiers via cross-validation ──────────────────────────
     print("\n[3/4] Evaluating classifiers (5-fold cross-validation)...")
     candidates = {
         'SVM (RBF)'    : SVC(kernel='rbf', C=10, gamma='scale', probability=True, random_state=SEED),
@@ -130,18 +111,15 @@ def train():
 
     print(f"\n  Best: {best_name} ({best_score:.1f}%)")
 
-    # ── Train best model on ALL data ──────────────────────────────────────────
     print("\n[4/4] Training best model on full dataset...")
     best_clf.fit(X_scaled, y)
 
-    # Classification report on training data (for reference)
     y_pred = best_clf.predict(X_scaled)
     print("\nTraining Classification Report:")
     print(classification_report(y, y_pred, target_names=['Healthy', 'Parkinson']))
     print("Confusion Matrix:")
     print(confusion_matrix(y, y_pred))
 
-    # ── Save model, scaler, labels ────────────────────────────────────────────
     model_path  = MODEL_OUT.resolve()
     scaler_path = SCALER_OUT.resolve()
     labels_path = LABELS_OUT.resolve()
@@ -158,7 +136,6 @@ def train():
     print(f"\n{'='*60}")
     print(f"DONE — Cross-validation accuracy: {best_score:.1f}%")
     print(f"{'='*60}")
-
 
 if __name__ == '__main__':
     try:

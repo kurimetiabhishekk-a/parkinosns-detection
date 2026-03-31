@@ -35,7 +35,6 @@ with zipfile.ZipFile(out_zip, 'w', zipfile.ZIP_DEFLATED) as zf:
                 zf.write(full, 'parkisense/' + rel)
                 count += 1
 
-    # Also include mydatabase.db if it exists
     db = os.path.join(project, 'mydatabase.db')
     if os.path.exists(db):
         zf.write(db, 'parkisense/mydatabase.db')

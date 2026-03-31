@@ -1,0 +1,12 @@
+﻿
+============================================================
+DEBUG [predict]: Starting voice analysis for upload/test.wav
+DEBUG [predict]: Attempting direct Parselmouth load...
+DEBUG [predict]: Direct load successful. Duration=3.00s
+DEBUG [predict]: Extracting Praat features...
+DEBUG [measurePitch]: jitter=NaN, shimmer=NaN, hnr05=-1.95, mean_f0=NaN
+DEBUG [predict]: jitter NaN -> interpolated lj=0.00300
+DEBUG [predict]: shimmer NaN -> interpolated ls=0.0170
+DEBUG [predict]: severity=0.5667 -> is_parkinson=True (j=0.00300 jScore=0.150, s=0.0170 sScore=0.283, h=-1.95 hScore=2.000)
+DEBUG [predict]: is_parkinson=True, accuracy=63.4%
+('Parkinson', "Parkinson's vocal markers detected in the sustained vowel.", 63.4)

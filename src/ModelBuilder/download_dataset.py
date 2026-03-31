@@ -1,15 +1,4 @@
-"""
-Parkinson's Spiral Drawing Dataset Downloader
-=============================================
-Downloads the 'kmader/parkinsons-drawings' dataset from Kaggle,
-extracts it, and organizes images into:
-  spiral_data/Healthy/
-  spiral_data/Parkinson/
 
-Usage:
-  1. Place your kaggle.json in C:/Users/<you>/.kaggle/kaggle.json
-  2. Run: python download_dataset.py
-"""
 
 import os, sys, shutil, zipfile
 
@@ -47,7 +36,6 @@ def download():
     os.makedirs(OUT_DIR, exist_ok=True)
     kaggle.api.dataset_download_files(DATASET, path=OUT_DIR, unzip=False, quiet=False)
 
-    # Find the downloaded zip
     zips = [f for f in os.listdir(OUT_DIR) if f.endswith(".zip")]
     if not zips:
         print("[ERROR] No zip file found after download.")
@@ -60,15 +48,14 @@ def download():
     print("[OK] Extracted.")
 
 def organize():
-    """Find healthy/parkinson image folders and copy to Healthy/ Parkinson/"""
+    
     print("[3/4] Organizing images into Healthy/ and Parkinson/ folders...")
     os.makedirs(HEALTHY, exist_ok=True)
     os.makedirs(PARKINSON, exist_ok=True)
 
-    # Walk through extracted folders looking for 'healthy' and 'parkinson' dirs
     copied_h = copied_p = 0
     for root, dirs, files in os.walk(OUT_DIR):
-        # Skip destination dirs to avoid infinite loop
+
         if root.startswith(HEALTHY) or root.startswith(PARKINSON):
             continue
         folder_name = os.path.basename(root).lower()

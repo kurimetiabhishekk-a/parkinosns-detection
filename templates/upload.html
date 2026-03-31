@@ -403,7 +403,6 @@
 
 <div class="spiral-page">
 
-	<!-- Hero -->
 	<div class="spiral-hero">
 		<div class="spiral-badge">
 			<i class="fas fa-microphone"></i>
@@ -415,7 +414,7 @@
 	</div>
 
 	<div class="spiral-layout">
-		<!-- ── Left: Upload Card ── -->
+		
 		<div class="canvas-card">
 			<div class="canvas-card-header">
 				<div class="canvas-card-title">
@@ -428,7 +427,7 @@
 				<i class="fas fa-info-circle"></i>
 				<span>Sustain an English vowel sound: <strong>"Ahhh"</strong>, <strong>"Eee"</strong>, <strong>"Iii"</strong>, <strong>"Ohh"</strong>, or <strong>"Uuu"</strong> for 3–5 seconds. Other sounds will be rejected.</span>
 			</div>
-			<!-- Vowel hint pills -->
+			
 			<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
 				<span style="background:#ede9fe;color:#7c3aed;border-radius:50px;padding:5px 16px;font-size:13px;font-weight:700;">A &mdash; "Ahhh"</span>
 				<span style="background:#ede9fe;color:#7c3aed;border-radius:50px;padding:5px 16px;font-size:13px;font-weight:700;">E &mdash; "Eee"</span>
@@ -442,7 +441,6 @@
 					style="width: 100%; display: flex; flex-direction: column;">
 					<input type="hidden" name="audio_base64" id="audioBase64">
 
-					<!-- Record Audio Section -->
 					<div class="record-btn-wrap">
 						<button type="button" class="btn-record" id="recordBtn">
 							<i class="fas fa-microphone"></i>
@@ -496,7 +494,6 @@
 			</div>
 			{% endif %}
 
-			<!-- Theory Components -->
 			<div class="card-header-custom" style="margin-top: 32px; border-top: 1px solid #f1f5f9; padding-top: 24px;">
 				<i class="fas fa-flask" style="color:#10b981;"></i> About ParkiSense Voice Test
 			</div>
@@ -515,7 +512,6 @@
 			</div>
 		</div>
 
-		<!-- ── Right: Tips Panel (Sidebar) ── -->
 		<div class="tips-panel">
 			<div class="tips-header">
 				<i class="fas fa-lightbulb"></i> Audio Instructions
@@ -786,7 +782,6 @@
 				return;
 			}
 
-
 			// Show loading state
 			if (e.submitter && e.submitter.value === 'Detect PD') {
 				// Inject a hidden input to carry the submitter's name/value across since disabling it will strip it from the POST body
@@ -806,8 +801,6 @@
 	}
 </script>
 
-
-<!-- Loading overlay -->
 <div id="loadingOverlay"
 	style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.65); z-index:9999; flex-direction:column; align-items:center; justify-content:center; gap:20px;">
 	<div

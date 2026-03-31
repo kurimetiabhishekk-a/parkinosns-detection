@@ -1,9 +1,7 @@
-'''Dataset link
-https://zenodo.org/record/2867216#.XpuGXsgzaUl
-'''
+
 
 from src.lib.RecognitionLib import *
-#print("hello")
+
 def testVoice():
     import os
     audio_path = "upload/test.wav"

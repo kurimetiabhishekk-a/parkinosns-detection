@@ -18,27 +18,8 @@ def try_conn(pwd):
     except Exception as e:
         return False
 
-# Base pattern
 base_raw = "E1lOIPImeOw43Izw"
 base = list(base_raw)
-
-# Indices where there might be confusion (1, l, I, 0, O)
-# E1lOIPImeOw43Izw ->
-# 1 -> 1, l, I
-# l -> l, 1, I
-# O -> O, 0
-# I -> I, l, 1
-# P
-# I -> I, l, 1
-# m
-# e
-# O -> O, 0
-# w
-# 4
-# 3
-# I -> I, l, 1
-# z
-# w
 
 variants = {
     1: ['1', 'l', 'I'],
@@ -62,7 +43,7 @@ for combo in itertools.product(*options):
     pwd = "".join(p)
     if try_conn(pwd):
         print(f"SUCCESS! Correct PWD: {pwd}")
-        # write to file
+
         with open("found_pwd.txt", "w") as f:
             f.write(pwd)
         sys.exit(0)

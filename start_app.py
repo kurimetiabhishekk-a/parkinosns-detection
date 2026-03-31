@@ -18,16 +18,14 @@ def check_dependencies():
         subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"])
 
 def run_app():
-    # 1. Load context
+
     load_dotenv()
-    
-    # 2. Check ENV
+
     if not os.path.exists(".env"):
         log("No .env file found! Creating one with defaults...", "WARNING")
-        # (This should have been handled by the agent already, but as backup)
+
         return
 
-    # 3. Test Connection
     uri = os.environ.get('MONGODB_URI', '').strip()
     if not uri or '<password>' in uri:
         log("MONGODB_URI is not set correctly in your .env file.", "ERROR")
@@ -45,12 +43,11 @@ def run_app():
         log("Also check if your password in .env is correct.", "INFO")
         return
 
-    # 4. Launch Flask
     log("Starting ParkiSense Early Detection System...", "SUCCESS")
     log("Open your browser at: http://127.0.0.1:5000", "INFO")
     
     try:
-        # We use subprocess to keep it clean
+
         subprocess.run(["python", "main.py"], check=True)
     except KeyboardInterrupt:
         log("Server stopped by user.", "INFO")

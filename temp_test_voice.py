@@ -1,13 +1,12 @@
 
 import sys
 import os
-# Add current directory to path
+
 sys.path.append(os.getcwd())
 
 from voiceTest import testVoice
 import shutil
 
-# Copy healthy_tone.wav to upload/test.wav
 os.makedirs('upload', exist_ok=True)
 shutil.copy('healthy_tone.wav', 'upload/test.wav')
 

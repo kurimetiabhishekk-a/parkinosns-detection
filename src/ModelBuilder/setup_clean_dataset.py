@@ -3,14 +3,12 @@ import os, shutil
 base  = os.path.join(os.path.dirname(__file__), "spiral_data")
 clean = os.path.join(os.path.dirname(__file__), "spiral_data_clean")
 
-# Create clean directory with only 2 class folders
 for cls in ["Healthy", "Parkinson"]:
     d = os.path.join(clean, cls)
     if os.path.exists(d):
         shutil.rmtree(d)
     os.makedirs(d)
 
-# Copy ONLY spiral training+testing images (not wave or synthetic)
 mapping = {"healthy": "Healthy", "parkinson": "Parkinson"}
 counts = {"Healthy": 0, "Parkinson": 0}
 

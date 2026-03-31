@@ -1,0 +1,2 @@
+GOOD: ('Healthy', 'Likely Healthy Sample', 'Excellent motor control. Ensure 7-9 hours of quality sleep to maintain cognitive sharpness.', '73.36')
+BAD: ('Healthy', 'Likely Healthy Sample', 'Healthy pattern detected. Antioxidant-rich diets (berries, nuts) support neurological health.', '73.05')

@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ParkiSense Flowchart</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #fff;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+  .chart {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    width: 520px;
+  }
+
+  /* Shapes */
+  .oval {
+    padding: 12px 36px;
+    border-radius: 50px;
+    font-weight: 700;
+    font-size: 15px;
+    text-align: center;
+    border: 2px solid #333;
+    min-width: 160px;
+  }
+  .start { background: #f97316; color: #fff; border-color: #c2410c; }
+  .end   { background: #ef4444; color: #fff; border-color: #b91c1c; }
+
+  .box {
+    background: #fff;
+    border: 2px solid #333;
+    padding: 10px 20px;
+    font-size: 13.5px;
+    font-weight: 600;
+    text-align: center;
+    width: 280px;
+    border-radius: 4px;
+  }
+
+  /* Diamond */
+  .diamond-wrap {
+    width: 220px;
+    height: 80px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .diamond {
+    width: 200px;
+    height: 72px;
+    background: #fef08a;
+    border: 2px solid #333;
+    transform: rotate(45deg);
+    position: absolute;
+  }
+  .diamond-label {
+    position: relative;
+    z-index: 2;
+    font-size: 12.5px;
+    font-weight: 700;
+    text-align: center;
+    color: #1e293b;
+    padding: 0 10px;
+  }
+
+  /* Arrows */
+  .arrow {
+    width: 2px;
+    background: #333;
+    position: relative;
+    height: 28px;
+  }
+  .arrow::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-top: 10px solid #333;
+  }
+  .arrow-label {
+    font-size: 11px;
+    color: #555;
+    font-weight: 600;
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    white-space: nowrap;
+  }
+
+  /* Branch layout */
+  .branch-row {
+    display: flex;
+    align-items: flex-start;
+    width: 100%;
+    justify-content: center;
+    gap: 0;
+    position: relative;
+  }
+  .branch-side {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 200px;
+  }
+  .branch-connector {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .h-line {
+    height: 2px;
+    background: #333;
+    width: 100px;
+  }
+  .v-line {
+    width: 2px;
+    background: #333;
+    height: 30px;
+  }
+  .side-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #555;
+    margin-bottom: 4px;
+  }
+  .branch-box {
+    background: #fff;
+    border: 2px solid #333;
+    padding: 9px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    width: 170px;
+    border-radius: 4px;
+  }
+  .no-branch {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    position: absolute;
+    right: 10px;
+    top: -10px;
+  }
+  .loop-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #555;
+  }
+  .title {
+    font-size: 22px;
+    font-weight: 800;
+    color: #1e293b;
+    text-align: center;
+    margin-bottom: 36px;
+    text-decoration: underline;
+    letter-spacing: 1px;
+  }
+</style>
+</head>
+<body>
+<div class="chart">
+  <div class="title">FLOWCHART – ParkiSense</div>
+
+  <div class="oval start">Start</div>
+  <div class="arrow"></div>
+
+  <div class="box">Open ParkiSense Website</div>
+  <div class="arrow"></div>
+
+  <div style="position:relative; display:flex; flex-direction:column; align-items:center; width:100%;">
+    <div class="diamond-wrap">
+      <div class="diamond"></div>
+      <div class="diamond-label">Already<br>Registered?</div>
+    </div>
+    
+    <div style="position:absolute; top:20px; right:60px; display:flex; align-items:center; gap:0;">
+      <div style="height:2px;width:60px;background:#333;"></div>
+      <div style="display:flex;flex-direction:column;align-items:center;">
+        <span style="font-size:11px;font-weight:700;color:#555;margin-bottom:3px;">No</span>
+        <div style="width:140px;background:#fff;border:2px solid #333;padding:8px 10px;font-size:12px;font-weight:600;text-align:center;border-radius:4px;">Register New Account</div>
+        <div style="width:2px;height:20px;background:#333;margin-top:0;"></div>
+      </div>
+    </div>
+    
+    <span style="font-size:11px;font-weight:700;color:#555;margin-top:-4px;">Yes</span>
+  </div>
+  <div class="arrow"></div>
+
+  <div class="box">User Login<br><span style="font-size:11px;font-weight:400;">(Email/Password or Google OAuth)</span></div>
+  <div class="arrow"></div>
+
+  <div class="box">Access Home Dashboard</div>
+  <div class="arrow"></div>
+
+  <div style="display:flex;flex-direction:column;align-items:center;width:100%;position:relative;">
+    <div class="diamond-wrap">
+      <div class="diamond"></div>
+      <div class="diamond-label">Select Test</div>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:flex-start;width:480px;justify-content:center;margin-top:0;">
+    
+    <div style="display:flex;flex-direction:column;align-items:center;width:220px;">
+      <div style="height:2px;width:90px;background:#333;align-self:flex-end;"></div>
+      <div style="width:2px;height:20px;background:#333;"></div>
+      <span class="side-label">Spiral Test</span>
+      <div class="branch-box">Draw Spiral on Canvas<br>or Upload Image</div>
+      <div style="width:2px;height:30px;background:#333;"></div>
+    </div>
+    
+    <div style="display:flex;flex-direction:column;align-items:center;width:220px;">
+      <div style="height:2px;width:90px;background:#333;align-self:flex-start;"></div>
+      <div style="width:2px;height:20px;background:#333;"></div>
+      <span class="side-label">Voice Test</span>
+      <div class="branch-box">Record Voice or<br>Upload WAV File</div>
+      <div style="width:2px;height:30px;background:#333;"></div>
+    </div>
+  </div>
+  
+  <div style="display:flex;align-items:center;width:480px;justify-content:center;">
+    <div style="height:2px;width:240px;background:#333;"></div>
+  </div>
+  <div class="arrow"></div>
+
+  <div class="box">AI Model Processes Input<br><span style="font-size:11px;font-weight:400;">(Geometric + SVM / Praat + RF)</span></div>
+  <div class="arrow"></div>
+
+  <div class="box">Display Result with Confidence %</div>
+  <div class="arrow"></div>
+
+  <div class="box">View Combined Dashboard Report</div>
+  <div class="arrow"></div>
+
+  <div style="position:relative; display:flex; flex-direction:column; align-items:center; width:100%;">
+    <div class="diamond-wrap">
+      <div class="diamond"></div>
+      <div class="diamond-label">Run Another<br>Test?</div>
+    </div>
+    
+    <div style="position:absolute; top:20px; left:55px; display:flex; align-items:center;">
+      <div style="display:flex;flex-direction:column;align-items:center;">
+        <div style="height:2px;width:55px;background:#333;"></div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-start;">
+        <span style="font-size:11px;font-weight:700;color:#555;">Yes ↑ (Back to Select Test)</span>
+      </div>
+    </div>
+    <span style="font-size:11px;font-weight:700;color:#555;margin-top:-4px;">No</span>
+  </div>
+  <div class="arrow"></div>
+
+  <div class="box">Logout</div>
+  <div class="arrow"></div>
+
+  <div class="oval end">End</div>
+</div>
+</body>
+</html>

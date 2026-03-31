@@ -1,9 +1,4 @@
-"""
-Parkinson's Disease Detection - Train with UCI Dataset
-UCI Dataset: 196 samples, 22 voice features, target: 'status' (1=Parkinson, 0=Healthy)
-Features match what RecognitionLib.py extracts (jitter, shimmer, HNR, etc.)
-Saves model to: ../../trainedModel.sav  (replaces the old model)
-"""
+
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -17,9 +12,6 @@ from sklearn.metrics import classification_report, confusion_matrix, accuracy_sc
 import joblib
 import os
 
-# ============================================================================
-# 1. LOAD UCI DATASET
-# ============================================================================
 print("=" * 60)
 print("LOADING UCI PARKINSON'S DATASET")
 print("=" * 60)
@@ -35,15 +27,10 @@ print(f"\nClass distribution (status: 1=Parkinson, 0=Healthy):")
 print(df['status'].value_counts())
 print(f"\nParkinson's rate: {df['status'].mean()*100:.1f}%")
 
-# ============================================================================
-# 2. FEATURE ENGINEERING
-# ============================================================================
 print("\n" + "=" * 60)
 print("FEATURE SELECTION")
 print("=" * 60)
 
-# Drop 'name' (patient identifier, not a feature)
-# Keep all 22 voice features; target is 'status'
 DROP_COLS = ['name']
 LABEL_COL = 'status'
 
@@ -53,14 +40,10 @@ y = df[LABEL_COL]
 print(f"Features used ({X.shape[1]}): {list(X.columns)}")
 print(f"Samples: {len(X)}")
 
-# ============================================================================
-# 3. PREPROCESSING
-# ============================================================================
 print("\n" + "=" * 60)
 print("PREPROCESSING")
 print("=" * 60)
 
-# MinMaxScaler works well for SVM and matches original project style
 scaler = MinMaxScaler(feature_range=(-1, 1))
 X_scaled = scaler.fit_transform(X)
 
@@ -71,9 +54,6 @@ X_train, X_test, y_train, y_test = train_test_split(
 print(f"Training samples: {len(X_train)}")
 print(f"Test samples    : {len(X_test)}")
 
-# ============================================================================
-# 4. TRAIN MULTIPLE MODELS AND PICK BEST
-# ============================================================================
 print("\n" + "=" * 60)
 print("MODEL TRAINING")
 print("=" * 60)
@@ -102,9 +82,6 @@ for name, model in models.items():
     print(f"  Test  Accuracy : {test_acc*100:.2f}%")
     print(f"  CV Accuracy    : {cv_scores.mean()*100:.2f}% (+/- {cv_scores.std()*100:.2f}%)")
 
-# ============================================================================
-# 5. PICK BEST MODEL (by CV accuracy then test accuracy)
-# ============================================================================
 print("\n" + "=" * 60)
 print("MODEL SELECTION")
 print("=" * 60)
@@ -123,14 +100,10 @@ print(classification_report(y_test, y_pred, target_names=["Healthy", "Parkinson"
 print("Confusion Matrix:")
 print(confusion_matrix(y_test, y_pred))
 
-# ============================================================================
-# 6. SAVE MODEL + SCALER
-# ============================================================================
 print("\n" + "=" * 60)
 print("SAVING MODEL")
 print("=" * 60)
 
-# Bundle model + scaler + feature names so RecognitionLib can use it
 model_bundle = {
     "model": best_model,
     "scaler": scaler,

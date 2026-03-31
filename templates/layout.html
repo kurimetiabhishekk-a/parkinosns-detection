@@ -62,13 +62,10 @@
 
 <body id="page-top">
 
-    <!-- Page Wrapper -->
     <div id="wrapper">
 
-        <!-- Sidebar -->
         <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
 
-            <!-- Sidebar Brand -->
             <a class="sidebar-brand d-flex align-items-center justify-content-center" href="/home">
                 <div class="sidebar-brand-icon">
                     <i class="fas fa-brain"></i>
@@ -76,10 +73,8 @@
                 <div class="sidebar-brand-text mx-3">PARKISENSE</div>
             </a>
 
-            <!-- Divider -->
             <hr class="sidebar-divider my-0">
 
-            <!-- Dashboard -->
             <li class="nav-item">
                 <a class="nav-link" href="/home">
                     <i class="fas fa-fw fa-th-large"></i>
@@ -87,10 +82,8 @@
                 </a>
             </li>
 
-            <!-- Divider -->
             <hr class="sidebar-divider">
 
-            <!-- Spiral Test -->
             <li class="nav-item">
                 <a class="nav-link" href="/image">
                     <i class="fas fa-fw fa-circle-notch"></i>
@@ -98,7 +91,6 @@
                 </a>
             </li>
 
-            <!-- Voice Test -->
             <li class="nav-item">
                 <a class="nav-link" href="/upload">
                     <i class="fas fa-fw fa-microphone"></i>
@@ -106,7 +98,6 @@
                 </a>
             </li>
 
-            <!-- Reports -->
             <li class="nav-item">
                 <a class="nav-link" href="/dashboard">
                     <i class="fas fa-fw fa-chart-bar"></i>
@@ -114,10 +105,8 @@
                 </a>
             </li>
 
-            <!-- Divider -->
             <hr class="sidebar-divider">
 
-            <!-- Logout -->
             <li class="nav-item">
                 <a class="nav-link" href="/logout">
                     <i class="fas fa-fw fa-sign-out-alt"></i>
@@ -125,40 +114,31 @@
                 </a>
             </li>
 
-            <!-- Divider -->
             <hr class="sidebar-divider d-none d-md-block">
 
-            <!-- Sidebar Toggler -->
             <div class="text-center d-none d-md-inline">
                 <button class="rounded-circle border-0" id="sidebarToggle"></button>
             </div>
 
         </ul>
-        <!-- End Sidebar -->
 
-        <!-- Content Wrapper -->
         <div id="content-wrapper" class="d-flex flex-column">
 
-            <!-- Main Content -->
             <div id="content">
 
-                <!-- Topbar -->
                 <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
 
-                    <!-- Sidebar Toggle (Mobile) -->
                     <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
                         <i class="fa fa-bars"></i>
                     </button>
 
-                    <!-- Welcome Text -->
                     <div class="d-none d-sm-inline-block form-inline mr-auto ml-md-3 my-2 my-md-0 mw-100">
                         <h6 class="mb-0 font-weight-bold" style="color: #1e293b; letter-spacing: -0.3px;">Welcome to
                             ParkiSense!</h6>
                     </div>
 
-                    <!-- Topbar Nav -->
                     <ul class="navbar-nav ml-auto">
-                        <!-- User Info -->
+                        
                         <li class="nav-item dropdown no-arrow">
                             <a class="nav-link d-flex align-items-center" href="#" id="userDropdown" role="button"
                                 data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="gap: 12px;">
@@ -171,7 +151,7 @@
                                     %}
                                 </div>
                             </a>
-                            <!-- Dropdown -->
+                            
                             <div class="dropdown-menu dropdown-menu-right shadow" aria-labelledby="userDropdown">
                                 <div class="dropdown-header"
                                     style="font-size:0.75rem; font-weight:700; color:#94a3b8; letter-spacing:1px; text-transform:uppercase;">
@@ -189,31 +169,21 @@
                     </ul>
 
                 </nav>
-                <!-- End Topbar -->
 
-                <!-- Begin Page Content -->
                 <div class="container-fluid">
                     {% block content %}{% endblock %}
                 </div>
-                <!-- /.container-fluid -->
 
             </div>
-            <!-- End Main Content -->
-
-
 
         </div>
-        <!-- End Content Wrapper -->
 
     </div>
-    <!-- End Page Wrapper -->
 
-    <!-- Scroll to Top -->
     <a class="scroll-to-top rounded" href="#page-top">
         <i class="fas fa-angle-up"></i>
     </a>
 
-    <!-- Logout Modal -->
     <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="logoutModalLabel"
         aria-hidden="true">
         <div class="modal-dialog" role="document">
@@ -238,12 +208,8 @@
         </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════════════════
-         Sense Chatbot Widget
-    ════════════════════════════════════════════════════════════════ -->
     <div class="sense-bubble" id="senseBubble">
 
-        <!-- Chat Panel -->
         <div class="sense-panel" id="sensePanel">
             <div class="sense-header">
                 <div class="sense-header-icon">
@@ -257,7 +223,7 @@
             </div>
 
             <div class="sense-messages" id="senseMessages">
-                <!-- Initial bot message -->
+                
                 <div class="sense-msg bot" id="senseWelcome" style="display:none;">
                     Hello, <strong>{% if name %}{{ name }}{% else %}there{% endif %}</strong>! 👋 I'm
                     <strong>Sense</strong>, your ParkiSense AI assistant.
@@ -288,19 +254,16 @@
             </div>
         </div>
 
-        <!-- Toggle Button -->
         <button class="sense-btn" id="senseToggle" title="Chat with Sense" aria-label="Open Sense Chatbot">
             <i id="senseIcon" class="fas fa-comment-medical" style="font-size:22px;"></i>
         </button>
     </div>
 
-    <!-- Bootstrap core JS -->
     <script src="{{ url_for('static', filename='vendor/jquery/jquery.min.js') }}"></script>
     <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
     <script src="{{ url_for('static', filename='vendor/jquery-easing/jquery.easing.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/sb-admin-2.min.js') }}"></script>
 
-    <!-- Active Nav Link Highlighter -->
     <script>
         (function () {
             var path = window.location.pathname;
@@ -312,7 +275,6 @@
         })();
     </script>
 
-    <!-- Sense Chatbot Logic -->
     <script>
         (function () {
             var panel = document.getElementById('sensePanel');

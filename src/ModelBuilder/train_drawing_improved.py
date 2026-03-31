@@ -1,14 +1,4 @@
-"""
-Improved Parkinson's Drawing CNN Trainer
-=========================================
-Improvements over train_drawing_cnn.py:
-  1. Uses ALL real images: spiral + wave (204 total: 102 Healthy, 102 Parkinson)
-  2. EfficientNetB0 backbone (better than MobileNetV2 for small datasets)
-  3. Aggressive data augmentation (brightness, contrast, shear, hflip, vflip)
-  4. Longer training with better LR schedule
-  5. Class-weighted training for balanced learning
-  6. Saves the same keras_model.h5 used by the app
-"""
+
 
 import os, sys, shutil, math, random
 import numpy as np
@@ -26,9 +16,8 @@ SEED       = 42
 random.seed(SEED)
 np.random.seed(SEED)
 
-# ─── Step 1: Build clean dataset using ALL real images ───────────────────────
 def build_dataset():
-    """Combine spiral + wave training+testing into one clean directory."""
+    
     for cls in ["Healthy", "Parkinson"]:
         d = os.path.join(CLEAN_DIR, cls)
         if os.path.exists(d):
@@ -58,7 +47,6 @@ def build_dataset():
     print(f"  Total    : {sum(counts.values())} images in 2 classes")
     return counts
 
-# ─── Step 2: Train ────────────────────────────────────────────────────────────
 def train(counts):
     import tensorflow as tf
     from tensorflow.keras.applications import EfficientNetB0
@@ -75,7 +63,6 @@ def train(counts):
     print(f"  Image size : {IMG_SIZE}x{IMG_SIZE}")
     print("="*60)
 
-    # ── Aggressive augmentation ──────────────────────────────────────────────
     train_gen = ImageDataGenerator(
         rescale=1./255,
         rotation_range=30,
@@ -115,7 +102,6 @@ def train(counts):
     print(f"  Train    : {train_ds.samples} samples")
     print(f"  Val      : {val_ds.samples} samples")
 
-    # ── EfficientNetB0 model ─────────────────────────────────────────────────
     print("\n[Building EfficientNetB0 model...]")
     base = EfficientNetB0(
         input_shape=(IMG_SIZE, IMG_SIZE, 3),
@@ -135,7 +121,6 @@ def train(counts):
     outputs = layers.Dense(1, activation="sigmoid")(x)
     model = tf.keras.Model(inputs, outputs)
 
-    # ── Phase 1: Train head only ─────────────────────────────────────────────
     print(f"\n[Phase 1] Training head ({EPOCHS_P1} epochs, frozen base)...")
     model.compile(
         optimizer=optimizers.Adam(learning_rate=1e-3),
@@ -152,7 +137,6 @@ def train(counts):
         ),
     ]
 
-    # Class weights to handle any imbalance
     n_healthy   = counts["Healthy"]
     n_parkinson = counts["Parkinson"]
     total       = n_healthy + n_parkinson
@@ -171,7 +155,6 @@ def train(counts):
         verbose=1
     )
 
-    # ── Phase 2: Fine-tune top layers ────────────────────────────────────────
     print(f"\n[Phase 2] Fine-tuning top 40 layers ({EPOCHS_P2} epochs)...")
     base.trainable = True
     for layer in base.layers[:-40]:
@@ -192,7 +175,6 @@ def train(counts):
         verbose=1
     )
 
-    # ── Evaluate ─────────────────────────────────────────────────────────────
     print("\n[Evaluation]")
     val_ds.reset()
     y_pred_proba = model.predict(val_ds, verbose=0)
@@ -207,7 +189,6 @@ def train(counts):
     val_loss, val_acc = model.evaluate(val_ds, verbose=0)
     print(f"\nFinal Validation Accuracy: {val_acc*100:.2f}%")
 
-    # ── Save ─────────────────────────────────────────────────────────────────
     out_path = os.path.abspath(MODEL_OUT)
     if os.path.exists(out_path):
         bak = out_path.replace(".h5", ".h5.bak_improved")
@@ -216,7 +197,6 @@ def train(counts):
     model.save(out_path)
     print(f"New improved model saved to : {out_path}")
 
-    # Update labels.txt
     labels_path = os.path.join(BASE_DIR, "..", "..", "labels.txt")
     with open(labels_path, "w") as f:
         for cls_name, idx in sorted(train_ds.class_indices.items(), key=lambda x: x[1]):

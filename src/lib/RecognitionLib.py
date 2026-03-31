@@ -1,14 +1,4 @@
-"""
-Voice-based Parkinson's detection library.
 
-FIX (2026-03-30):
-  Confidence is computed ENTIRELY from measured acoustic features
-  (jitter, shimmer, HNR) calibrated against UCI dataset reference ranges.
-  The ML model binary output is used only as a secondary tiebreaker.
-  Hash-based random nudging removed — results are now deterministic and
-  physically meaningful.
-  Input validation (English vowels only) enforced at the frontend.
-"""
 
 import joblib
 import pandas as pd
@@ -18,7 +8,6 @@ import time
 import gc
 import hashlib
 
-# Optional heavy libraries
 try:
     import librosa
     import soundfile as sf
@@ -33,7 +22,6 @@ try:
 except ImportError:
     PARSEL_AVAILABLE = False
 
-# UCI Dataset Reference Statistics (Healthy Means from 196-sample dataset)
 _UCI_HEALTHY_MEANS = {
     "MDVP:Fo(Hz)": 181.0,   "MDVP:Fhi(Hz)": 223.0,  "MDVP:Flo(Hz)": 145.0,
     "MDVP:Jitter(%)": 0.003, "MDVP:Jitter(Abs)": 0.00002,
@@ -45,23 +33,19 @@ _UCI_HEALTHY_MEANS = {
     "spread1": -6.75,        "spread2": 0.160,          "D2": 2.15,  "PPE": 0.120,
 }
 
-
 def _compute_acoustic_confidence(lj, ls, hnr, is_parkinson, severity):
-    """Compute confidence purely from acoustic deviation from UCI reference ranges."""
+    
     if is_parkinson:
-        # How far into PD territory: severity 0.60 -> 0%, severity 1.0 -> 100%
-        penetration = min((severity - 0.60) / 0.40, 1.0)
+        penetration = min((severity - 0.70) / 0.30, 1.0)
         raw = 60.0 + penetration * 35.0
-        return round(min(95.0, max(60.0, raw)), 2)
-    else:
-        # How clearly healthy: severity 0.0 -> 97%, severity 0.60 -> 55%
-        clarity = max(0.0, (0.60 - severity) / 0.60)
-        raw = 55.0 + clarity * 42.0
         return round(min(97.0, max(55.0, raw)), 2)
-
+    else:
+        clarity = max(0.0, (0.70 - severity) / 0.70)
+        raw = 60.0 + clarity * 38.0
+        return round(min(98.0, max(55.0, raw)), 2)
 
 def loadModel(PATH):
-    """Load a joblib model (or model bundle dict) from PATH."""
+    
     try:
         clf = joblib.load(PATH)
         print(f"DEBUG [loadModel]: Model loaded from {PATH} — type={type(clf).__name__}")
@@ -70,15 +54,13 @@ def loadModel(PATH):
         print(f"DEBUG [loadModel]: FAILED to load model from {PATH}: {e}")
         return None
 
-
 def _is_bundle(clf):
-    """Return True if clf is a UCI model bundle (dict)."""
+    
     return isinstance(clf, dict) and "model" in clf
-
 
 if PARSEL_AVAILABLE:
     def measurePitch(voiceID, f0min, f0max, unit):
-        """Extract jitter, shimmer, HNR, and F0 metrics via Parselmouth/Praat."""
+        
         try:
             if isinstance(voiceID, str):
                 sound = parselmouth.Sound(voiceID)
@@ -137,26 +119,14 @@ if PARSEL_AVAILABLE:
             print(f"DEBUG [measurePitch]: FATAL: {e}")
             return (np.nan,) * 16
 
-
     def predict(clf, wavPath):
-        """Primary voice prediction with guaranteed varied confidence scores.
-
-        Pipeline:
-          1. Hash audio file for deterministic per-file variation.
-          2. Load into Parselmouth (with librosa fallback for WebM/compressed audio).
-          3. Extract jitter, shimmer, HNR.
-          4. Binary classify using UCI-calibrated acoustic thresholds.
-          5. Optionally use ML model as tiebreaker for ambiguous cases.
-          6. Compute confidence ENTIRELY from acoustic features + hash.
-             This eliminates the 88.43% static bug completely.
-        """
+        
         print(f"\n{'='*60}")
         print(f"DEBUG [predict]: Starting voice analysis for {wavPath}")
 
         temp_wav = wavPath + ".fixed.wav"
         sound = None
 
-        # Step 2: Load audio
         try:
             print(f"DEBUG [predict]: Attempting direct Parselmouth load...")
             sound = parselmouth.Sound(wavPath)
@@ -190,7 +160,6 @@ if PARSEL_AVAILABLE:
         if sound is None:
             return 'Healthy', "Could not read audio. Please upload a standard .WAV file.", 60.0
 
-        # Step 3: Extract features
         print("DEBUG [predict]: Extracting Praat features...")
         metrics = measurePitch(sound, 75, 1000, "Hertz")
         (localJitter, localabsoluteJitter, rapJitter, ppq5Jitter,
@@ -198,13 +167,8 @@ if PARSEL_AVAILABLE:
          apq11Shimmer, hnr05, hnr15, hnr25,
          mean_f0, stdev_f0, max_f0, min_f0) = metrics
 
-        # If we couldn't detect a mean fundamental frequency (F0), or if both
-        # jitter and shimmer failed, the audio lacks a coherent periodic signal.
-        # This occurs with silence, breath noise, or very poor microphone quality.
         signal_failed = np.isnan(mean_f0) or (np.isnan(localJitter) and np.isnan(localShimmer))
 
-        # Do NOT silently substitute healthy means — that falsely clears bad recordings,
-        # and letting it proceed with negative HNR mathematically forces a Parkinson's result.
         if signal_failed:
             print("DEBUG [predict]: Periodic signal detection failed (F0 or Jitter/Shimmer = NaN).")
             return 'Healthy', (
@@ -213,8 +177,6 @@ if PARSEL_AVAILABLE:
                 "for at least 3 seconds at a comfortable volume."
             ), 50.0
 
-        # Step 4b: Resolve individual NaN values by interpolation from available features.
-        # Only substitute healthy mean if that specific feature failed but others succeeded.
         if np.isnan(localJitter):
             lj = float(np.nanmean([localabsoluteJitter * 100.0, rapJitter, ppq5Jitter])) if not np.isnan(rapJitter) else 0.003
             print(f"DEBUG [predict]: jitter NaN -> interpolated lj={lj:.5f}")
@@ -228,46 +190,37 @@ if PARSEL_AVAILABLE:
             ls = localShimmer
 
         if np.isnan(hnr05):
-            # Average available HNR measurements
+
             hnr_vals = [v for v in [hnr05, hnr15, hnr25] if not np.isnan(v)]
             hnr = float(np.mean(hnr_vals)) if hnr_vals else 20.0  # fallback: slightly below healthy (22dB)
             print(f"DEBUG [predict]: HNR NaN -> interpolated hnr={hnr:.2f}")
         else:
             hnr = hnr05
 
-        # Severity computed from UCI-calibrated acoustic thresholds.
-        # Jitter threshold: 0.008 (UCI PD boundary)
-        # Shimmer threshold: 0.030 (UCI PD boundary)
-        # HNR threshold: 22.0 dB (UCI boundary; lower = more noise = more PD-like)
-
         lj_clamped  = max(0.0, min(float(lj),  0.10))
         ls_clamped  = max(0.0, min(float(ls),  0.50))
         hnr_clamped = max(0.0, min(float(hnr), 40.0))
 
-        # Score each feature on [0,1]: 0 = clearly healthy, 1 = clearly PD
-        lj_score  = min(lj_clamped  / 0.020, 1.0)   # threshold at 0.020 (UCI: PD ~0.012)
-        ls_score  = min(ls_clamped  / 0.060, 1.0)   # threshold at 0.060 (UCI: PD ~0.050)
-        hnr_score = min(max(0.0, (28.0 - hnr_clamped) / 14.0), 1.0)  # max 1.0 to prevent out-of-bounds weight
+        lj_score  = min(lj_clamped  / 0.100, 1.0)
+        ls_score  = min(ls_clamped  / 0.250, 1.0)
+        hnr_score = min(max(0.0, (18.0 - hnr_clamped) / 10.0), 1.0)
 
-        # Weighted severity — jitter is most diagnostic for PD
         severity = lj_score * 0.45 + ls_score * 0.35 + hnr_score * 0.20
 
-        # 0.60 threshold: raised significantly to account for laptop microphone noise
-        is_parkinson = (severity >= 0.60)
+        is_parkinson = (severity >= 0.70)
 
         print(f"DEBUG [predict]: severity={severity:.4f} -> is_parkinson={is_parkinson} "
               f"(j={lj:.5f} jScore={lj_score:.3f}, s={ls:.4f} sScore={ls_score:.3f}, "
               f"h={hnr:.2f} hScore={hnr_score:.3f})")
 
-        # Step 6: Compute confidence purely from acoustics
         accuracy = _compute_acoustic_confidence(lj, ls, hnr, is_parkinson, severity)
 
         print(f"DEBUG [predict]: is_parkinson={is_parkinson}, accuracy={accuracy}%")
 
         if is_parkinson:
-            if severity > 0.85:
+            if severity > 0.90:
                 disp = "Strong Parkinson's Indicators Detected"
-            elif severity > 0.70:
+            elif severity > 0.80:
                 disp = "Parkinson's Pattern Observed"
             else:
                 disp = "Weak Parkinson's Indicators Detected"
@@ -279,18 +232,16 @@ if PARSEL_AVAILABLE:
                 disp = "Likely Healthy Sample"
             return 'Healthy', disp, accuracy
 
-
 else:
-    # Non-Parselmouth Fallback (Librosa Only)
+
     def measurePitch(voiceID, f0min, f0max, unit):
         return (np.nan,) * 16
 
     def predict(clf, wavPath):
-        """Deterministic fallback using librosa amplitude/ZCR (used when Parselmouth is unavailable)."""
+        
         try:
             print(f"DEBUG [predict-librosa]: Librosa-only fallback for {wavPath}")
 
-            # Compute file hash seed for determinism
             try:
                 with open(wavPath, 'rb') as _f:
                     file_hash_frac = int(hashlib.md5(_f.read()).hexdigest(), 16) / (16**32)
@@ -318,21 +269,21 @@ else:
 
             print(f"DEBUG [predict-librosa]: amplitude_cv={amplitude_cv:.3f}, zcr_std={zcr_std:.4f}, hash={file_hash_frac:.4f}")
 
-            lj_proxy  = min(zcr_std / 0.15, 1.0) * 0.020
-            ls_proxy  = min(amplitude_cv / 0.60, 1.0) * 0.060
-            hnr_proxy = max(14.0, 28.0 - amplitude_cv * 14.0)
+            lj_proxy  = min(zcr_std / 0.15, 1.0) * 0.100
+            ls_proxy  = min(amplitude_cv / 0.60, 1.0) * 0.250
+            hnr_proxy = max(5.0, 18.0 - amplitude_cv * 13.0)
 
-            lj_score = min(lj_proxy / 0.020, 1.0)
-            ls_score = min(ls_proxy / 0.060, 1.0)
-            hnr_score = min(max(0.0, (28.0 - hnr_proxy) / 14.0), 1.0)
+            lj_score = min(lj_proxy / 0.100, 1.0)
+            ls_score = min(ls_proxy / 0.250, 1.0)
+            hnr_score = min(max(0.0, (18.0 - hnr_proxy) / 10.0), 1.0)
             severity = lj_score * 0.45 + ls_score * 0.35 + hnr_score * 0.20
 
-            is_parkinson = (severity >= 0.60)  # raised to 0.60 for consumer microphones
+            is_parkinson = (severity >= 0.70)
             accuracy = _compute_acoustic_confidence(lj_proxy, ls_proxy, hnr_proxy, is_parkinson, severity)
 
             if is_parkinson:
-                if severity > 0.85: disp = "Strong Parkinson's Indicators Detected"
-                elif severity > 0.70: disp = "Parkinson's Pattern Observed"
+                if severity > 0.90: disp = "Strong Parkinson's Indicators Detected"
+                elif severity > 0.80: disp = "Parkinson's Pattern Observed"
                 else: disp = "Weak Parkinson's Indicators Detected"
                 return 'Parkinson', disp, accuracy
             else:
