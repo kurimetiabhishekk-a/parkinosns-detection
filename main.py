@@ -49,7 +49,7 @@ app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_SECURE'] = os.environ.get('FLASK_ENV') == 'production'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # Allow up to 50 MB uploads
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # Increased to 100MB to avoid payload limits
 
 MONGODB_URI = (os.environ.get('MONGODB_URI') or 'mongodb+srv://abhishekkurimeti97_db_user:ParkiSense_2026_Secure123@cluster0.gege15n.mongodb.net/parkisense?retryWrites=true&w=majority').strip()
 if MONGODB_URI.startswith('"') and MONGODB_URI.endswith('"'):
@@ -423,21 +423,23 @@ def upload():
             audio_b64 = request.form.get('audio_base64')
             print(f"DEBUG: Voice analysis requested. b64_len={len(audio_b64) if audio_b64 else 0}")
             
-            if audio_b64 and ',' in audio_b64:
+            # 1. Prioritize direct file upload first (less memory intensive)
+            if f and f.filename:
+                f.save(os.path.join(savepath, 'test.wav'))
+                print(f"DEBUG: Audio saved directly from upload file: {f.filename}")
+            # 2. Fallback to base64 only if binary file is missing
+            elif audio_b64 and ',' in audio_b64:
                 import base64
                 header, encoded = audio_b64.split(",", 1)
                 try:
                     raw_audio = base64.b64decode(encoded)
                     with open(os.path.join(savepath, 'test.wav'), 'wb') as f_out:
                         f_out.write(raw_audio)
-                    print("DEBUG: Recorded audio unpacked from base64 instantly.")
+                    print("DEBUG: Recorded audio unpacked from base64 fallback.")
                 except Exception as e:
                     print(f"DEBUG: Base64 decode error: {e}")
-            elif f and f.filename:
-                f.save(os.path.join(savepath, 'test.wav'))
-                print(f"DEBUG: Audio saved from upload file: {f.filename}")
             else:
-                print("DEBUG: No audio data provided via base64 or file upload.")
+                print("DEBUG: No audio data provided via file upload or base64.")
                 
             print("DEBUG: Calling testVoice()...")
             try:

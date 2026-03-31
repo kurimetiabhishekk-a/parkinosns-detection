@@ -454,7 +454,7 @@
 					<div class="upload-area" id="dropArea">
 						<i class="fas fa-cloud-upload-alt upload-icon"></i>
 						<div class="upload-text">Click or Drag &amp; Drop audio file here</div>
-						<div class="upload-subtext">WAV format supported. Max size 5MB.</div>
+						<div class="upload-subtext">WAV format supported. Max size 50MB.</div>
 						<input type="file" name="doc" id="audioInput" accept="audio/wav">
 						<div class="file-name-display" id="fileNameDisplay"><i class="fas fa-music mr-1"></i>
 							<span></span>
@@ -486,9 +486,8 @@
 					</div>
 					<div class="conf-bar"
 						style="height: 6px; background: #e2e8f0; border-radius: 10px; overflow: hidden; margin-top: 8px;">
-						<div class="conf-fill"
-							style="height: 100%; background: linear-gradient(90deg, #6366f1, #8b5cf6); border-radius: 10px; width: {{ accuracy|default(0) }}%;">
-						</div>
+						{% set progress_style = 'style="height:100%;background:linear-gradient(90deg,#6366f1,#8b5cf6);border-radius:10px;width:' ~ (accuracy|default(0)) ~ '%;"' %}
+						<div class="conf-fill" {{ progress_style|safe }}></div>
 					</div>
 				</div>
 			</div>
@@ -593,18 +592,28 @@
 			}
 			
 			const finalWavBlob = new Blob([buffer], { type: "audio/wav" });
-			const reader = new FileReader();
-			reader.readAsDataURL(finalWavBlob);
-			reader.onloadend = function () {
-				document.getElementById('audioBase64').value = reader.result;
-				try {
-					const file = new File([finalWavBlob], finalFileName, { type: 'audio/wav' });
-					const dt = new DataTransfer();
-					dt.items.add(file);
-					document.getElementById('audioInput').files = dt.files;
-				} catch (e) { }
-				updateUploadUI(finalFileName);
+			const fileName = finalFileName;
+			
+			// 1. Try to set the binary File Input first (most efficient)
+			try {
+				const file = new File([finalWavBlob], fileName, { type: 'audio/wav' });
+				const dt = new DataTransfer();
+				dt.items.add(file);
+				document.getElementById('audioInput').files = dt.files;
+				
+				// CLEAR THE BASE64 field to save 60%+ payload size!
+				document.getElementById('audioBase64').value = "";
+				console.log("Audio injected as binary file. Base64 field cleared to save bandwidth.");
+			} catch (e) {
+				// 2. Fallback to Base64 ONLY if binary File injection fails
+				const reader = new FileReader();
+				reader.readAsDataURL(finalWavBlob);
+				reader.onloadend = function () {
+					document.getElementById('audioBase64').value = reader.result;
+					console.warn("Binary injection failed. Using Base64 fallback.");
+				};
 			}
+			updateUploadUI(fileName);
 		}).catch(err => {
 			console.error("Audio Conversion Error:", err);
 			alert("An error occurred formatting the audio. Please try again.");
