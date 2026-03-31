@@ -201,9 +201,9 @@ if PARSEL_AVAILABLE:
         ls_clamped  = max(0.0, min(float(ls),  0.50))
         hnr_clamped = max(0.0, min(float(hnr), 40.0))
 
-        lj_score  = min(lj_clamped  / 0.100, 1.0)
-        ls_score  = min(ls_clamped  / 0.250, 1.0)
-        hnr_score = min(max(0.0, (18.0 - hnr_clamped) / 10.0), 1.0)
+        lj_score  = min(lj_clamped  / 0.035, 1.0)
+        ls_score  = min(ls_clamped  / 0.120, 1.0)
+        hnr_score = min(max(0.0, (26.0 - hnr_clamped) / 16.0), 1.0)
 
         severity = lj_score * 0.45 + ls_score * 0.35 + hnr_score * 0.20
 
@@ -269,13 +269,13 @@ else:
 
             print(f"DEBUG [predict-librosa]: amplitude_cv={amplitude_cv:.3f}, zcr_std={zcr_std:.4f}, hash={file_hash_frac:.4f}")
 
-            lj_proxy  = min(zcr_std / 0.15, 1.0) * 0.100
-            ls_proxy  = min(amplitude_cv / 0.60, 1.0) * 0.250
-            hnr_proxy = max(5.0, 18.0 - amplitude_cv * 13.0)
+            lj_proxy  = min(zcr_std / 0.15, 1.0) * 0.035
+            ls_proxy  = min(amplitude_cv / 0.60, 1.0) * 0.120
+            hnr_proxy = max(5.0, 26.0 - amplitude_cv * 14.0)
 
-            lj_score = min(lj_proxy / 0.100, 1.0)
-            ls_score = min(ls_proxy / 0.250, 1.0)
-            hnr_score = min(max(0.0, (18.0 - hnr_proxy) / 10.0), 1.0)
+            lj_score = min(lj_proxy / 0.035, 1.0)
+            ls_score = min(ls_proxy / 0.120, 1.0)
+            hnr_score = min(max(0.0, (26.0 - hnr_proxy) / 16.0), 1.0)
             severity = lj_score * 0.45 + ls_score * 0.35 + hnr_score * 0.20
 
             is_parkinson = (severity >= 0.70)

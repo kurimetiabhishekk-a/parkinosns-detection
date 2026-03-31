@@ -539,11 +539,12 @@
                                     {% if entry.accuracy %}
                                     <div style="display:flex;align-items:center;gap:8px;">
                                         <div style="flex:1;height:5px;background:#e2e8f0;border-radius:4px;min-width:60px;">
-                                            {% set t_width = "width:" ~ entry.accuracy ~ "%;" %}
+                                            {% set style_good = 'style="height:100%;border-radius:4px;width:' ~ entry.accuracy ~ '%;background:linear-gradient(90deg,#22c55e,#16a34a);"' %}
+                                            {% set style_bad = 'style="height:100%;border-radius:4px;width:' ~ entry.accuracy ~ '%;background:linear-gradient(90deg,#f87171,#dc2626);"' %}
                                             {% if entry.label != 'Parkinson' %}
-                                            <div style="height:100%;border-radius:4px;{{ t_width }}background:linear-gradient(90deg,#22c55e,#16a34a);"></div>
+                                            <div {{ style_good|safe }}></div>
                                             {% else %}
-                                            <div style="height:100%;border-radius:4px;{{ t_width }}background:linear-gradient(90deg,#f87171,#dc2626);"></div>
+                                            <div {{ style_bad|safe }}></div>
                                             {% endif %}
                                         </div>
                                         <span style="font-size:12px;font-weight:700;color:#6366f1;">{{ entry.accuracy }}%</span>
